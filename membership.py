@@ -10,7 +10,8 @@ class MemberDatabase:
         self.__connection.commit()
         self.__connection.close()
 
-    def getMember(self, memberId):
+    def getMember(self, memberId, updateTimestamp = True):
         c = self.__connection.cursor()
         c.execute('SELECT firstName,lastName FROM users WHERE barcode=?', (memberId,))
+        # todo: if updateTimestamp then update last_attended time
         return c.fetchone()
