@@ -14,3 +14,7 @@ class MemberDatabase:
         c = self.__connection.cursor()
         c.execute('SELECT firstName,lastName FROM users WHERE barcode=?', (memberId,))
         return c.fetchone()
+
+    def addMember(self, memberId, firstName, lastName, college):
+        c = self.__connection.cursor()
+        c.execute('INSERT INTO users (barcode, firstName, lastName, college, datejoined, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)', (memberId, firstName, lastName, college, date.today(), datetime.utcnow(), datetime.utcnow()))
