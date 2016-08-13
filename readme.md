@@ -15,4 +15,4 @@
 ### Who do I talk to? ###
 
 * This repository is maintained by [Alex Thorne](http://alexthorne.net/) ([email](mailto:alex@alexthorne.net)).
-* Please get in touch with feature requests, bug reports, etc.
+* Please get in touch with feature requests, bug reports, etc (and if you have any improvements please make a pull request!)
