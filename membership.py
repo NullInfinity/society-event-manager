@@ -22,8 +22,14 @@ class MemberDatabase:
     def getMember(self, memberId, updateTimestamp = True):
         c = self.__connection.cursor()
         c.execute('SELECT firstName,lastName FROM users WHERE barcode=?', (memberId,))
-        # todo: if updateTimestamp then update last_attended time
-        return c.fetchone()
+        users = c.fetchall()
+
+        # if necessary update last_attended date
+        if (updateTimestamp):
+            c.execute('UPDATE users SET last_attended=? WHERE barcode=?', (datetime.date.today(), memberId))
+            self.commit()
+
+        return users
 
     def addMember(self, memberId, firstName, lastName, college):
         c = self.__connection.cursor()
