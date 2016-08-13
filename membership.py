@@ -10,6 +10,14 @@ class MemberDatabase:
         self.__connection.commit()
         self.__connection.close()
 
+    # wrapper around sqlite3.Connection.commit():
+    # commits if safe is set to True
+    # this means users can optionally disable autocommiting for potentially better
+    # performance at the cost of reduced data safety on crashes
+    def commit(self):
+        if self.__safe:
+            conn.commit()
+
     def getMember(self, memberId, updateTimestamp = True):
         c = self.__connection.cursor()
         c.execute('SELECT firstName,lastName FROM users WHERE barcode=?', (memberId,))
