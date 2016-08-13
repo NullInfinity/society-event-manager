@@ -3,8 +3,9 @@
 import sqlite3
 
 class MemberDatabase:
-    def __init__(self, dbFile = 'members.db'):
+    def __init__(self, dbFile = 'members.db', safe = True):
         self.__connection = sqlite3.connect(dbFile)
+        self.__safe = safe
 
     def __del__(self):
         self.__connection.commit()
