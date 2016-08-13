@@ -8,7 +8,7 @@ class MemberDatabase:
         self.__safe = safe
 
     def __del__(self):
-        self.__connection.commit()
+        self.__connection.commit() # here use actual commit: we want to commit regardless of safe
         self.__connection.close()
 
     # wrapper around sqlite3.Connection.commit():
