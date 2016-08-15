@@ -1,11 +1,11 @@
-# README #
+# socman.py #
 
 ### What is this repository for? ###
 
-* This repository contains the source for the society event manager.
+* This repository contains the source for socman.py, the society membership tracker
 * It tracks attendance of events and checks membership using IDs or barcode numbers.
-* I created this software to aid my role as IT secretary of the [Oxford Invariants Mathematical Society](http://invariants.org.uk/).
-* Licensed under the MIT licence.
+* I created this software as IT secretary for the [Oxford Invariants Mathematical Society](http://invariants.org.uk/) in order to record and verify membership status
+* Licensed under the MIT licence (see licence.txt).
 * Version 0.1
 
 ### How do I get set up? ###

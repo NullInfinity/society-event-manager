@@ -2,7 +2,8 @@
 import membership
 from datetime import date
 
-print('Society Event Manager 0.1')
+app_name = "socman.py"
+app_version = "0.1"
 
 event_name = input('Please enter event name: ')
 event_date = date.today()
