@@ -58,3 +58,6 @@ class MemberDatabase:
     def addMember(self, memberId, firstName, lastName, college):
         c = self.__connection.cursor()
         c.execute('INSERT INTO users (barcode, firstName, lastName, college, datejoined, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)', (memberId, firstName, lastName, college, date.today(), datetime.utcnow(), datetime.utcnow()))
+        __conn.commit() # direct commit here: don't want to lose new member data
+
+        return True
