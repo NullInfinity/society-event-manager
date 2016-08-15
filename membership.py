@@ -1,6 +1,7 @@
 """Manage society membership by checking member IDs and adding new members"""
 
 import sqlite3
+import datetime
 
 class MemberDatabase:
     def __init__(self, dbFile = 'members.db', safe = True):
@@ -56,6 +57,10 @@ class MemberDatabase:
         return users
 
     def addMember(self, memberId, firstName, lastName, college):
+        if getMember(self, memberId, firstName=firstName, lastName=lastName, updateTimestamp=False, updateName=True):
+            return False
+
+        # if member does not exist, add them
         c = self.__connection.cursor()
         c.execute('INSERT INTO users (barcode, firstName, lastName, college, datejoined, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)', (memberId, firstName, lastName, college, date.today(), datetime.utcnow(), datetime.utcnow()))
         __conn.commit() # direct commit here: don't want to lose new member data
