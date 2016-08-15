@@ -15,9 +15,9 @@ class MemberDatabase:
     # commits if safe is set to True
     # this means users can optionally disable autocommiting for potentially better
     # performance at the cost of reduced data safety on crashes
-    def commit(self):
+    def optionalCommit(self):
         if self.__safe:
-            conn.commit()
+            self.__connection.commit()
 
     def getMember(self, memberId, updateTimestamp = True):
         c = self.__connection.cursor()
