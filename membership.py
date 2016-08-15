@@ -9,7 +9,7 @@ class MemberDatabase:
         self.__safe = safe
 
     def __del__(self):
-        self.__connection.commit() # here use actual commit: we want to commit regardless of safe
+        self.__connection.commit() # here use sql commit() directly: we want to commit regardless of safe
         self.__connection.close()
 
     # wrapper around sqlite3.Connection.commit():
@@ -20,7 +20,7 @@ class MemberDatabase:
         if self.__safe:
             self.__connection.commit()
 
-    def getMember(self, memberId, firstName=None, lastName=None, updateTimestamp = True, autoFix = False):
+    def getMember(self, memberId, firstName = None, lastName = None, updateTimestamp = True, autoFix = False):
         c = self.__connection.cursor()
 
         # first try to find member by memberId, if available
@@ -28,11 +28,15 @@ class MemberDatabase:
             c.execute('SELECT firstName,lastName FROM users WHERE barcode=?', (memberId,))
             users = c.fetchall()
             if users:
-                # todo dedupe if necessary
+                # TODO dedupe if necessary
 
                 # if necessary update last_attended date
                 if (updateTimestamp):
                     c.execute('UPDATE users SET last_attended=? WHERE barcode=?', (datetime.date.today(), memberId))
+
+                # if autoFix is set and both names are provided, correct names
+                if autoFix and firstName and lastName:
+                    c.execute('UPDATE users SET firstName=?, lastName=? WHERE barcode=?', (firstName, lastName, memberId))
 
                 self.optionalCommit()
 
@@ -48,9 +52,10 @@ class MemberDatabase:
         if not users:
             return None # still nothing found
 
-        # found them so update barcode if set
-        c.execute('UPDATE users SET barcode=? WHERE firstName=? AND lastName=?', (memberId, firstName, lastName))
-        self.optionalCommit()
+        # found them so update barcode if autoFix is set
+        if autoFix and memberId:
+            c.execute('UPDATE users SET barcode=? WHERE firstName=? AND lastName=?', (memberId, firstName, lastName))
+            self.optionalCommit()
 
         # TODO dedupe if necessary
 
