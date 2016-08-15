@@ -19,7 +19,7 @@ class MemberDatabase:
         if self.__safe:
             self.__connection.commit()
 
-    def getMember(self, memberId, updateTimestamp = True):
+    def getMember(self, memberId, firstName=None, lastName=None, updateTimestamp = True, autoFix = False):
         c = self.__connection.cursor()
 
         # first try to find member by memberId, if available
@@ -37,7 +37,23 @@ class MemberDatabase:
 
                 return users[0]
 
-        return None
+        # ID lookup failed; now try finding by name
+        if not firstName or not lastName:
+            return None
+
+        c.execute('SELECT firstName,lastName FROM users WHERE firstName=? AND lastName=?', (firstName, lastName))
+        users = c.fetchall()
+
+        if not users:
+            return None # still nothing found
+
+        # found them so update barcode if set
+        c.execute('UPDATE users SET barcode=? WHERE firstName=? AND lastName=?', (memberId, firstName, lastName))
+        self.optionalCommit()
+
+        # TODO dedupe if necessary
+
+        return users
 
     def addMember(self, memberId, firstName, lastName, college):
         c = self.__connection.cursor()
