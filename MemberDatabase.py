@@ -1,4 +1,4 @@
-"""Manage society membership by checking member IDs and adding new members"""
+"""MemberDatabase tracks and verifies society membership in a sqlite database"""
 
 import sqlite3
 import datetime
