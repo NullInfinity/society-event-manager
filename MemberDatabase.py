@@ -61,8 +61,8 @@ class MemberDatabase:
 
         return users
 
-    def add_member(self, memberId, firstname, lastname, college):
-        if self.get_member(self, memberId, firstName=firstname, lastName=lastname, updateTimestamp=False, autoFix=True):
+    def add_member(self, memberId, firstName, lastName, college):
+        if self.get_member(memberId, firstName=firstName, lastName=lastName, updateTimestamp=False, autoFix=True):
             return False
 
         # if member does not exist, add them
