@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/NullInfinity/socman.py.svg?branch=master)](https://travis-ci.org/NullInfinity/socman.py)
+
 # socman.py #
 
 ### What is this repository for? ###
