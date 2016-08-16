@@ -6,4 +6,7 @@ python:
   - "3.5-dev"
   - "nightly"
   - "pypy3"
+os:
+  - linux
+  - osx
 script: python -m unittest
