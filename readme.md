@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/NullInfinity/socman.py.svg?branch=master)](https://travis-ci.org/NullInfinity/socman.py)
+[![Coverage Status](https://coveralls.io/repos/github/NullInfinity/socman.py/badge.svg?branch=master)](https://coveralls.io/github/NullInfinity/socman.py?branch=master)
 
 # socman.py #
 
