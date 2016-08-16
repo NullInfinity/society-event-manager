@@ -105,7 +105,7 @@ class MemberDatabaseTestCase(unittest.TestCase):
         self.assertEqual(2, mocksql_connect().cursor().execute.call_count)
         self.assertTrue(mdb.optionalCommit.called)
 
-    def test_getMember_barcodeOnly_present_unique_noUpdateTimestamp_autoFix_notNeeded(self, mocksql_connect):
+    def test_getMember_barcodeOnly_present_unique_noUpdateTimestamp_autoFix(self, mocksql_connect):
         mdb = MemberDatabase('test.db')
         mdb.optionalCommit = MagicMock()
         mocksql_connect().cursor().fetchall.return_value = [(self.firstName, self.lastName)]
@@ -115,7 +115,7 @@ class MemberDatabaseTestCase(unittest.TestCase):
         self.assertEqual(1, mocksql_connect().cursor().execute.call_count)
         self.assertTrue(mdb.optionalCommit.called)
 
-    def test_getMember_barcodeAndNames_present_unique_noUpdateTimestamp_autoFix_needed(self, mocksql_connect):
+    def test_getMember_barcodeAndNames_present_unique_noUpdateTimestamp_autoFix(self, mocksql_connect):
         mdb = MemberDatabase('test.db')
         mdb.optionalCommit = MagicMock()
         mocksql_connect().cursor().fetchall.return_value = [(self.firstName, self.lastName)]
