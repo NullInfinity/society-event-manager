@@ -40,7 +40,7 @@ while True:
         print('quit')
         break
 
-    if barcode == 'NOT' or !checkMember():
+    if barcode == 'NOT' or not checkMember():
         # add member?
         pass
         #offer to add, make onetime sale, or cancel

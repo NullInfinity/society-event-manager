@@ -4,7 +4,7 @@ import sqlite3
 from datetime import date, datetime
 
 class MemberDatabase:
-    def __init__(self, dbFile = 'members.db', safe = True):
+    def __init__(self, dbFile='members.db', safe=True):
         self.__connection = sqlite3.connect(dbFile)
         self.__safe = safe
 
@@ -16,11 +16,11 @@ class MemberDatabase:
     # commits if safe is set to True
     # this means users can optionally disable autocommiting for potentially better
     # performance at the cost of reduced data safety on crashes
-    def optionalCommit(self):
+    def optional_commit(self):
         if self.__safe:
             self.__connection.commit()
 
-    def getMember(self, memberId, firstName = None, lastName = None, updateTimestamp = True, autoFix = False):
+    def get_member(self, memberId, firstName=None, lastName=None, updateTimestamp=True, autoFix=False):
         c = self.__connection.cursor()
 
         # first try to find member by memberId, if available
@@ -38,7 +38,7 @@ class MemberDatabase:
                 if autoFix and firstName and lastName:
                     c.execute('UPDATE users SET firstName=?, lastName=? WHERE barcode=?', (firstName, lastName, memberId))
 
-                self.optionalCommit()
+                self.optional_commit()
 
                 return users[0]
 
@@ -55,14 +55,14 @@ class MemberDatabase:
         # found them so update barcode if autoFix is set
         if autoFix and memberId:
             c.execute('UPDATE users SET barcode=? WHERE firstName=? AND lastName=?', (memberId, firstName, lastName))
-            self.optionalCommit()
+            self.optional_commit()
 
         # TODO dedupe if necessary
 
         return users
 
-    def addMember(self, memberId, firstName, lastName, college):
-        if self.getMember(self, memberId, firstName=firstName, lastName=lastName, updateTimestamp=False, updateName=True):
+    def add_member(self, memberId, firstname, lastname, college):
+        if self.get_member(self, memberId, firstName=firstname, lastName=lastname, updateTimestamp=False, autoFix=True):
             return False
 
         # if member does not exist, add them
