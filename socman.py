@@ -24,7 +24,7 @@ def checkMember(barcode):
         # not found so first offer to find by name
         print('Barcode not found. Try searching by name.')
         names = input('First name: '), input('Last name: ')
-        member = mdb.
+        member = mdb.getMember(barcode, firstName = names[0], lastName = names[1])
     else:
         # found the member in the database, great!
         print('Welcome, {0} {1}.'.format(*names))

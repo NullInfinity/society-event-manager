@@ -1,7 +1,7 @@
 """MemberDatabase tracks and verifies society membership in a sqlite database"""
 
 import sqlite3
-import datetime
+from datetime import date, datetime
 
 class MemberDatabase:
     def __init__(self, dbFile = 'members.db', safe = True):
@@ -32,7 +32,7 @@ class MemberDatabase:
 
                 # if necessary update last_attended date
                 if (updateTimestamp):
-                    c.execute('UPDATE users SET last_attended=? WHERE barcode=?', (datetime.date.today(), memberId))
+                    c.execute('UPDATE users SET last_attended=? WHERE barcode=?', (date.today(), memberId))
 
                 # if autoFix is set and both names are provided, correct names
                 if autoFix and firstName and lastName:
@@ -62,12 +62,12 @@ class MemberDatabase:
         return users
 
     def addMember(self, memberId, firstName, lastName, college):
-        if getMember(self, memberId, firstName=firstName, lastName=lastName, updateTimestamp=False, updateName=True):
+        if self.getMember(self, memberId, firstName=firstName, lastName=lastName, updateTimestamp=False, updateName=True):
             return False
 
         # if member does not exist, add them
         c = self.__connection.cursor()
         c.execute('INSERT INTO users (barcode, firstName, lastName, college, datejoined, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)', (memberId, firstName, lastName, college, date.today(), datetime.utcnow(), datetime.utcnow()))
-        __conn.commit() # direct commit here: don't want to lose new member data
+        self.__conn.commit() # direct commit here: don't want to lose new member data
 
         return True
