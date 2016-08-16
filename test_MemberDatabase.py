@@ -5,7 +5,7 @@ from datetime import date
 from unittest.mock import MagicMock, patch, call
 from MemberDatabase import MemberDatabase
 
-@patch('sqlite3.connect')
+@patch('MemberDatabase.sqlite3.connect')
 class MemberDatabaseTestCase(unittest.TestCase):
     def setUp(self):
         self.firstName = 'Ted'
@@ -97,7 +97,7 @@ class MemberDatabaseTestCase(unittest.TestCase):
         self.assertEqual(1, mocksql_connect().cursor().fetchall.call_count)
         self.assertTrue(mdb.optionalCommit.called)
 
-    @patch('datetime.date')
+    @patch('MemberDatabase.date')
     def test_getMember_barcodeOnly_present_unique_updateTimestamp(self, mock_date, mocksql_connect):
         mdb = MemberDatabase('test.db')
         mdb.optionalCommit = MagicMock()
