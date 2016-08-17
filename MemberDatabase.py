@@ -3,6 +3,24 @@
 import sqlite3
 from datetime import date, datetime
 
+class Name:
+    __sep = ' '
+
+    def __init__(self, *names):
+        self.names = list(names)
+
+    def first(self):
+        return Name.__sep.join(self.names[:-1])
+
+    def last(self):
+        return Name.__sep.join(self.names[-1:])
+
+    def full(self):
+        return Name.__sep.join(self.names)
+
+    def __bool__(self):
+        return bool(self.names)
+
 class MemberDatabase:
     def __init__(self, dbFile='members.db', safe=True):
         self.__connection = sqlite3.connect(dbFile)
