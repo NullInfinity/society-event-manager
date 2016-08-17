@@ -30,8 +30,25 @@ class Name:
     def full(self):
         return Name.__sep.join(self.names)
 
+class Member:
+    def __init__(self, barcode, *names, name=None, college=None):
+        self.barcode = barcode
+        if name:
+            self.name = name
+        else:
+            self.name = Name(*names)
+        self.college = college
+
     def __bool__(self):
-        return bool(self.names)
+        return bool(self.barcode or self.name)
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__dict__ == other.__dict__
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 class MemberDatabase:
     def __init__(self, dbFile='members.db', safe=True):
