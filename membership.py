@@ -9,6 +9,18 @@ class Name:
     def __init__(self, *names):
         self.names = list(names)
 
+    def __bool__(self):
+        return bool(self.names)
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.__dict__ == other.__dict__
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    # returns first and all middle names
     def first(self):
         return Name.__sep.join(self.names[:-1])
 
