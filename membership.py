@@ -67,6 +67,67 @@ class MemberDatabase:
         if self.__safe:
             self.__connection.commit()
 
+    def sql_build_name_value_pairs(self, member, sep):
+        columns = []
+        values = ()
+        if member.name.first():
+            columns += ['firstName=?']
+            values += (member.name.first(), )
+        if member.name.last():
+            columns += ['lastName=?']
+            values += (member.name.last(), )
+        if not columns:
+            return None, None
+        return sep.join(columns), values
+
+    def sql_search_barcode_phrase(self, member):
+        if not member.barcode:
+            return None, None
+        return 'barcode=?', (member.barcode, )
+    def sql_search_name_phrase(self, member):
+        if not member.name:
+            return None, None
+        return self.sql_build_name_value_pairs(member, ' AND ')
+    def sql_search_phrase(self, member):
+        phrase, values = self.sql_search_barcode_phrase(member)
+        if not phrase:
+            phrase, values = self.sql_search_name_phrase(member)
+        return phrase, values
+
+    def sql_update_barcode_phrase(self, member):
+        if not member.barcode:
+            return None, None
+        return ('barcode=?', (member.barcode,) )
+
+    def sql_update_name_phrase(self, member):
+        return self.sql_build_name_value_pairs(member, ',')
+
+    def sql_search_query(self, member):
+        phrase, values = self.sql_search_phrase(member)
+        if not phrase:
+            return None, None
+        return ('SELECT firstName,lastName FROM users WHERE ' + phrase, values)
+
+    def sql_update_barcode_query(self, member):
+        set_phrase, set_values = self.sql_update_barcode_phrase(member)
+        search_phrase, search_values = self.sql_search_name_phrase(member)
+        if not set_phrase or not search_phrase:
+            return None, None
+        return ('UPDATE users SET ' + set_phrase + ' WHERE ' + search_phrase, set_values + search_values)
+
+    def sql_update_name_query(self, member):
+        set_phrase, set_values = self.sql_update_name_phrase(member)
+        search_phrase, search_values = self.sql_search_barcode_phrase(member)
+        if not set_phrase or not search_phrase:
+            return None, None
+        return ('UPDATE users SET ' + set_phrase + ' WHERE ' + search_phrase, set_values + search_values)
+
+    def sql_update_last_attended_query(self, member):
+        search_phrase, search_values = self.sql_search_phrase(member)
+        if not search_phrase:
+            return None, None
+        return ('UPDATE users SET last_attended=? WHERE ' + search_phrase, (date.today(),) + search_values)
+
     def get_member(self, memberId, firstName=None, lastName=None, updateTimestamp=True, autoFix=False):
         c = self.__connection.cursor()
 
