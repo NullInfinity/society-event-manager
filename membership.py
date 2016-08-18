@@ -199,13 +199,19 @@ class MemberDatabase:
         # TODO dedupe if necessary
         return users[0]
 
-    def add_member(self, memberId, firstName, lastName, college):
-        if self.get_member(memberId, firstName=firstName, lastName=lastName, update_timestamp=False, autofix=True):
+    def sql_add_query(self, member):
+        return 'INSERT INTO users (barcode, firstName, lastName, college, datejoined, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)', (member.barcode, member.name.first(), member.name.last(), member.college, date.today(), datetime.utcnow(), datetime.utcnow())
+
+    def add_member(self, member):
+        if not member:
+            return False
+
+        if self.get_member(member=member, update_timestamp=False, autofix=True):
             return False
 
         # if member does not exist, add them
-        c = self.__connection.cursor()
-        c.execute('INSERT INTO users (barcode, firstName, lastName, college, datejoined, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)', (memberId, firstName, lastName, college, date.today(), datetime.utcnow(), datetime.utcnow()))
-        self.__conn.commit() # direct commit here: don't want to lose new member data
+        cursor = self.__connection.cursor()
+        cursor.execute(*self.sql_add_query(member))
+        self.__connection.commit() # direct commit here: don't want to lose new member data
 
         return True

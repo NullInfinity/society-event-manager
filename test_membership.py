@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 import unittest
-from datetime import date
+from datetime import date, datetime
 from unittest.mock import patch, call
 from membership import Name, Member, MemberDatabase
-
 class NameTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -88,8 +87,9 @@ class MemberDatabaseTestCase(unittest.TestCase):
         self.first_name = 'Ted'
         self.last_name = 'Bobson'
         self.barcode = '00000000'
-        self.member = Member(self.barcode, self.first_name, self.last_name)
-        self.member_nobarcode = Member(None, self.first_name, self.last_name)
+        self.college = 'Wolfson'
+        self.member = Member(self.barcode, self.first_name, self.last_name, college = self.college)
+        self.member_nobarcode = Member(None, self.first_name, self.last_name, college = self.college)
 
         self.mocksql_connect_patcher = patch('membership.sqlite3.connect')
         self.mocksql_connect = self.mocksql_connect_patcher.start()
@@ -186,7 +186,7 @@ class MemberDatabaseTestCase(unittest.TestCase):
         self.assertFalse(self.mocksql_connect().cursor().fetchall.called)
         self.assertFalse(self.mocksql_connect().commit.called)
 
-    def test_get_member_no_barcode_no_name_update_timestamp_autofix(self):
+    def test_get_member_no_barcode_no_name_autofix(self):
         self.assertIsNone(self.mdb.get_member(None, update_timestamp=False, autofix = True))
         self.assertFalse(self.mocksql_connect().cursor().execute.called)
         self.assertFalse(self.mocksql_connect().cursor().fetchall.called)
@@ -326,6 +326,25 @@ class MemberDatabaseTestCase(unittest.TestCase):
         self.assertEqual(3, self.mocksql_connect().cursor().execute.call_count)
         self.assertEqual(2, self.mocksql_connect().cursor().fetchall.call_count)
         self.assertTrue(self.mocksql_connect().commit.called)
+
+    def test_add_member_none(self):
+        self.assertFalse(self.mdb.add_member(None))
+
+    def test_add_member_present(self):
+        self.mocksql_connect().cursor().fetchall.return_value = [(self.first_name, self.last_name)]
+        self.assertFalse(self.mdb.add_member(self.member))
+        self.assertEqual(2, self.mocksql_connect().cursor().execute.call_count)
+
+    @patch('membership.datetime')
+    @patch('membership.date')
+    def test_add_member_new(self, mock_date, mock_datetime):
+        self.mocksql_connect().cursor().fetchall.return_value = []
+        mock_date.today.return_value = date.min
+        mock_datetime.utcnow.return_value = datetime.min
+
+        self.assertTrue(self.mdb.add_member(self.member))
+        self.mocksql_connect().cursor().execute.assert_called_with('INSERT INTO users (barcode, firstName, lastName, college, datejoined, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)', (self.barcode, self.first_name, self.last_name, self.college, date.min, datetime.min, datetime.min))
+        self.assertEqual(3, self.mocksql_connect().cursor().execute.call_count)
 
 if __name__ == '__main__':
     unittest.main()
