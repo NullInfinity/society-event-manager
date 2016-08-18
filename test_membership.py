@@ -88,12 +88,14 @@ class MemberDatabaseTestCase(unittest.TestCase):
         self.first_name = 'Ted'
         self.last_name = 'Bobson'
         self.barcode = '00000000'
+        self.member = Member(self.barcode, self.first_name, self.last_name)
+        self.member_nobarcode = Member(None, self.first_name, self.last_name)
 
         self.mocksql_connect_patcher = patch('membership.sqlite3.connect')
         self.mocksql_connect = self.mocksql_connect_patcher.start()
         self.addCleanup(self.mocksql_connect_patcher.stop)
 
-        self.mdb = MemberDatabase('test.db')
+        self.mdb = MemberDatabase('test.db', safe=True)
 
     def test_db_connect(self):
         self.mocksql_connect.assert_called_with('test.db')
@@ -165,131 +167,165 @@ class MemberDatabaseTestCase(unittest.TestCase):
         self.assertEqual(('UPDATE users SET last_attended=? WHERE barcode=?', (date.min, self.barcode)), self.mdb.sql_update_last_attended_query(Member(self.barcode)))
         self.assertEqual(('UPDATE users SET last_attended=? WHERE firstName=? AND lastName=?', (date.min, self.first_name, self.last_name)), self.mdb.sql_update_last_attended_query(Member(None, self.first_name, self.last_name)))
 
-#
-#    def test_get_member_no_barcode(self):
-#
-#        self.assertIsNone(mdb.get_member(None))
-#        self.assertFalse(self.mocksql_connect().cursor().execute.called)
-#        self.assertFalse(self.mocksql_connect().cursor().fetchall.called)
-#        self.assertFalse(mdb.optional_commit.called)
-#
-#    def test_get_member_no_barcode_no_update_timestamp(self):
-#        mdb = MemberDatabase('test.db')
-#        mdb.optional_commit = MagicMock()
-#
-#        self.assertIsNone(mdb.get_member(None, updateTimestamp = False))
-#        self.assertFalse(self.mocksql_connect().cursor().execute.called)
-#        self.assertFalse(self.mocksql_connect().cursor().fetchall.called)
-#        self.assertFalse(mdb.optional_commit.called)
-#
-#    def test_get_member_no_barcode_autofix(self):
-#        mdb = MemberDatabase('test.db')
-#        mdb.optional_commit = MagicMock()
-#
-#        self.assertIsNone(mdb.get_member(None, autoFix = True))
-#        self.assertFalse(self.mocksql_connect().cursor().execute.called)
-#        self.assertFalse(self.mocksql_connect().cursor().fetchall.called)
-#        self.assertFalse(mdb.optional_commit.called)
-#
-#    def test_get_member_barcodeOnly_notPresent(self):
-#        mdb = MemberDatabase('test.db')
-#        mdb.optional_commit = MagicMock()
-#        self.mocksql_connect().cursor().fetchall.return_value = []
-#
-#        self.assertIsNone(mdb.get_member(self.memberId))
-#        self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE barcode=?', (self.memberId,))
-#        self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
-#        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
-#        self.assertFalse(mdb.optional_commit.called)
-#
-#    def test_get_member_barcodeAndNames_notPresent(self):
-#        mdb = MemberDatabase('test.db')
-#        mdb.optional_commit = MagicMock()
-#        self.mocksql_connect().cursor().fetchall.return_value = []
-#
-#        self.assertIsNone(mdb.get_member(self.memberId, firstName=self.firstName, lastName=self.lastName))
-#        self.mocksql_connect().cursor().execute.assert_has_calls([call('SELECT firstName,lastName FROM users WHERE barcode=?', (self.memberId,)), call('SELECT firstName,lastName FROM users WHERE firstName=? AND lastName=?', (self.firstName, self.lastName))])
-#        self.assertEqual(2, self.mocksql_connect().cursor().execute.call_count)
-#        self.assertEqual(2, self.mocksql_connect().cursor().fetchall.call_count)
-#        self.assertFalse(mdb.optional_commit.called)
-#
-#    def test_get_member_namesOnly_notPresent(self):
-#        mdb = MemberDatabase('test.db')
-#        mdb.optional_commit = MagicMock()
-#        self.mocksql_connect().cursor().fetchall.return_value = []
-#
-#        self.assertIsNone(mdb.get_member(memberId = None, firstName=self.firstName, lastName=self.lastName))
-#        self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE firstName=? AND lastName=?', (self.firstName, self.lastName))
-#        self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
-#        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
-#        self.assertFalse(mdb.optional_commit.called)
-#
-#    def test_get_member_barcodeOnly_present_unique_noUpdateTimestamp(self):
-#        mdb = MemberDatabase('test.db')
-#        mdb.optional_commit = MagicMock()
-#        self.mocksql_connect().cursor().fetchall.return_value = [(self.firstName, self.lastName)]
-#
-#        self.assertEqual((self.firstName, self.lastName), mdb.get_member(self.memberId, updateTimestamp = False))
-#        self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE barcode=?', (self.memberId,))
-#        self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
-#        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
-#        self.assertTrue(mdb.optional_commit.called)
-#
-#    @patch('membership.date')
-#    def test_get_member_barcodeOnly_present_unique_updateTimestamp(self, mock_date):
-#        mdb = MemberDatabase('test.db')
-#        mdb.optional_commit = MagicMock()
-#        mock_date.today.return_value = date.min
-#        self.mocksql_connect().cursor().fetchall.return_value = [(self.firstName, self.lastName)]
-#
-#        self.assertEqual((self.firstName, self.lastName), mdb.get_member(self.memberId))
-#        self.mocksql_connect().cursor().execute.assert_has_calls([call('SELECT firstName,lastName FROM users WHERE barcode=?', (self.memberId,)), call('UPDATE users SET last_attended=? WHERE barcode=?', (date.min, self.memberId))])
-#        self.assertEqual(2, self.mocksql_connect().cursor().execute.call_count)
-#        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
-#        self.assertTrue(mdb.optional_commit.called)
-#
-#    def test_get_member_barcodeOnly_present_unique_noUpdateTimestamp_autoFix(self):
-#        mdb = MemberDatabase('test.db')
-#        mdb.optional_commit = MagicMock()
-#        self.mocksql_connect().cursor().fetchall.return_value = [(self.firstName, self.lastName)]
-#
-#        self.assertEqual((self.firstName, self.lastName), mdb.get_member(self.memberId, updateTimestamp=False, autoFix=True))
-#        self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE barcode=?', (self.memberId,))
-#        self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
-#        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
-#        self.assertTrue(mdb.optional_commit.called)
-#
-#    def test_get_member_barcodeAndNames_present_unique_noUpdateTimestamp(self):
-#        mdb = MemberDatabase('test.db')
-#        mdb.optional_commit = MagicMock()
-#        self.mocksql_connect().cursor().fetchall.return_value = [(self.firstName, self.lastName)]
-#
-#        self.assertEqual((self.firstName, self.lastName), mdb.get_member(self.memberId, firstName=self.firstName, lastName=self.lastName, updateTimestamp=False, autoFix=False))
-#        self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE barcode=?', (self.memberId,))
-#        self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
-#        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
-#        self.assertTrue(mdb.optional_commit.called)
-#
-#    def test_get_member_barcodeAndNames_present_unique_noUpdateTimestamp_autoFix(self):
-#        mdb = MemberDatabase('test.db')
-#        mdb.optional_commit = MagicMock()
-#        self.mocksql_connect().cursor().fetchall.return_value = [(self.firstName, self.lastName)]
-#
-#        self.assertEqual((self.firstName, self.lastName), mdb.get_member(self.memberId, firstName=self.firstName, lastName=self.lastName, updateTimestamp=False, autoFix=True))
-#        self.mocksql_connect().cursor().execute.assert_has_calls([call('SELECT firstName,lastName FROM users WHERE barcode=?', (self.memberId,)), call('UPDATE users SET firstName=?, lastName=? WHERE barcode=?', (self.firstName, self.lastName, self.memberId))])
-#        self.assertEqual(2, self.mocksql_connect().cursor().execute.call_count)
-#        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
-#        self.assertTrue(mdb.optional_commit.called)
-#
-#    def test_get_member_namesOnly_present_unique_noUpdateTimestamp_autoFix(self):
-#        mdb = MemberDatabase('test.db')
-#        mdb.optional_commit = MagicMock()
-#        self.mocksql_connect().cursor().fetchall.return_value = (self.firstName, self.lastName)
-#
-#        self.assertEqual((self.firstName, self.lastName), mdb.get_member(None, firstName=self.firstName, lastName=self.lastName, updateTimestamp=False, autoFix=True))
-#        self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE firstName=? AND lastName=?', (self.firstName, self.lastName,))
-#        self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
-#        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
+    def test_get_member_no_barcode_no_name_update_timestamp(self):
+
+        self.assertIsNone(self.mdb.get_member(None))
+        self.assertFalse(self.mocksql_connect().cursor().execute.called)
+        self.assertFalse(self.mocksql_connect().cursor().fetchall.called)
+        self.assertFalse(self.mocksql_connect().commit.called)
+
+    def test_get_member_no_barcode_no_name(self):
+        self.assertIsNone(self.mdb.get_member(None, update_timestamp = False))
+        self.assertFalse(self.mocksql_connect().cursor().execute.called)
+        self.assertFalse(self.mocksql_connect().cursor().fetchall.called)
+        self.assertFalse(self.mocksql_connect().commit.called)
+
+    def test_get_member_no_barcode_no_name_update_timestamp_autofix(self):
+        self.assertIsNone(self.mdb.get_member(None, autofix = True))
+        self.assertFalse(self.mocksql_connect().cursor().execute.called)
+        self.assertFalse(self.mocksql_connect().cursor().fetchall.called)
+        self.assertFalse(self.mocksql_connect().commit.called)
+
+    def test_get_member_no_barcode_no_name_update_timestamp_autofix(self):
+        self.assertIsNone(self.mdb.get_member(None, update_timestamp=False, autofix = True))
+        self.assertFalse(self.mocksql_connect().cursor().execute.called)
+        self.assertFalse(self.mocksql_connect().cursor().fetchall.called)
+        self.assertFalse(self.mocksql_connect().commit.called)
+
+    def test_get_member_barcode_not_present(self):
+        self.mocksql_connect().cursor().fetchall.return_value = []
+
+        self.assertIsNone(self.mdb.get_member(self.barcode))
+        self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode,))
+        self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
+        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
+        self.assertFalse(self.mocksql_connect().commit.called)
+
+    def test_get_member_barcode_via_member(self):
+        self.mocksql_connect().cursor().fetchall.return_value = []
+
+        self.assertIsNone(self.mdb.get_member(member=Member(self.barcode)))
+        self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode,))
+        self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
+        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
+        self.assertFalse(self.mocksql_connect().commit.called)
+
+    def test_get_member_barcode_via_member_priority(self):
+        self.mocksql_connect().cursor().fetchall.return_value = []
+
+        self.assertIsNone(self.mdb.get_member(barcode=self.barcode, member=Member('11111111')))
+        self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE barcode=?', ('11111111',))
+        self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
+        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
+        self.assertFalse(self.mocksql_connect().commit.called)
+
+    def test_get_member_barcode_name_not_present(self):
+        self.mocksql_connect().cursor().fetchall.return_value = []
+
+        self.assertIsNone(self.mdb.get_member(member=self.member))
+        self.mocksql_connect().cursor().execute.assert_has_calls([call('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode,)), call('SELECT firstName,lastName FROM users WHERE firstName=? AND lastName=?', (self.first_name, self.last_name))])
+        self.assertEqual(2, self.mocksql_connect().cursor().execute.call_count)
+        self.assertEqual(2, self.mocksql_connect().cursor().fetchall.call_count)
+        self.assertFalse(self.mocksql_connect().commit.called)
+
+    def test_get_member_name_not_present(self):
+        self.mocksql_connect().cursor().fetchall.return_value = []
+
+        self.assertIsNone(self.mdb.get_member(member=self.member_nobarcode))
+        self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE firstName=? AND lastName=?', (self.first_name, self.last_name))
+        self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
+        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
+        self.assertFalse(self.mocksql_connect().commit.called)
+
+    def test_get_member_barcode_present_unique(self):
+        self.mocksql_connect().cursor().fetchall.return_value = [(self.first_name, self.last_name)]
+
+        self.assertEqual((self.first_name, self.last_name), self.mdb.get_member(self.barcode, update_timestamp = False))
+        self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode,))
+        self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
+        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
+        self.assertTrue(self.mocksql_connect().commit.called)
+
+    @patch('membership.date')
+    def test_get_member_barcode_present_unique_update_timestamp(self, mock_date):
+        mock_date.today.return_value = date.min
+        self.mocksql_connect().cursor().fetchall.return_value = [(self.first_name, self.last_name)]
+
+        self.assertEqual((self.first_name, self.last_name), self.mdb.get_member(self.barcode))
+        self.mocksql_connect().cursor().execute.assert_has_calls([call('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode,)), call('UPDATE users SET last_attended=? WHERE barcode=?', (date.min, self.barcode))])
+        self.assertEqual(2, self.mocksql_connect().cursor().execute.call_count)
+        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
+        self.assertTrue(self.mocksql_connect().commit.called)
+
+    def test_get_member_barcode_present_unique_autofix(self):
+        self.mocksql_connect().cursor().fetchall.return_value = [(self.first_name, self.last_name)]
+
+        self.assertEqual((self.first_name, self.last_name), self.mdb.get_member(self.barcode, update_timestamp=False, autofix=True))
+        self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode,))
+        self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
+        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
+        self.assertTrue(self.mocksql_connect().commit.called)
+
+    def test_get_member_barcode_present_unique_name(self):
+        self.mocksql_connect().cursor().fetchall.side_effect = [[(self.first_name, self.last_name)], []]
+
+        self.assertEqual((self.first_name, self.last_name), self.mdb.get_member(member=self.member, update_timestamp=False, autofix=False))
+        self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode,))
+        self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
+        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
+        self.assertTrue(self.mocksql_connect().commit.called)
+
+    def test_get_member_barcode_present_unique_name_autofix(self):
+        self.mocksql_connect().cursor().fetchall.side_effect = [[(self.first_name, self.last_name)], []]
+
+        self.assertEqual((self.first_name, self.last_name), self.mdb.get_member(member=self.member, update_timestamp=False, autofix=True))
+        self.mocksql_connect().cursor().execute.assert_has_calls([call('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode,)), call('UPDATE users SET firstName=?,lastName=? WHERE barcode=?', (self.first_name, self.last_name, self.barcode))])
+        self.assertEqual(2, self.mocksql_connect().cursor().execute.call_count)
+        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
+        self.assertTrue(self.mocksql_connect().commit.called)
+
+    def test_get_member_name_present_unique(self):
+        self.mocksql_connect().cursor().fetchall.return_value = [(self.first_name, self.last_name)]
+
+        self.assertEqual((self.first_name, self.last_name), self.mdb.get_member(member=self.member_nobarcode, update_timestamp=False, autofix=False))
+        self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE firstName=? AND lastName=?', (self.first_name, self.last_name,))
+        self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
+        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
+
+    def test_get_member_name_present_unique_autofix(self):
+        self.mocksql_connect().cursor().fetchall.return_value = [(self.first_name, self.last_name)]
+
+        self.assertEqual((self.first_name, self.last_name), self.mdb.get_member(member=self.member_nobarcode, update_timestamp=False, autofix=True))
+        self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE firstName=? AND lastName=?', (self.first_name, self.last_name,))
+        self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
+        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
+
+    def test_get_member_name_unique_present_barcode(self):
+        self.mocksql_connect().cursor().fetchall.side_effect = [[], [(self.first_name, self.last_name)]]
+
+        self.assertEqual((self.first_name, self.last_name), self.mdb.get_member(member=self.member, update_timestamp=False))
+        self.mocksql_connect().cursor().execute.assert_has_calls([call('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode, )), call('SELECT firstName,lastName FROM users WHERE firstName=? AND lastName=?', (self.first_name, self.last_name,))])
+        self.assertEqual(2, self.mocksql_connect().cursor().execute.call_count)
+        self.assertEqual(2, self.mocksql_connect().cursor().fetchall.call_count)
+
+    @patch('membership.date')
+    def test_get_member_name_unique_present_barcode_update_timestamp(self, mock_date):
+        self.mocksql_connect().cursor().fetchall.side_effect = [[], [(self.first_name, self.last_name)]]
+        mock_date.today.return_value = date.min
+
+        self.assertEqual((self.first_name, self.last_name), self.mdb.get_member(member=self.member, update_timestamp=True))
+        self.mocksql_connect().cursor().execute.assert_has_calls([call('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode, )), call('SELECT firstName,lastName FROM users WHERE firstName=? AND lastName=?', (self.first_name, self.last_name,)), call('UPDATE users SET last_attended=? WHERE firstName=? AND lastName=?', (date.min, self.first_name, self.last_name))])
+        self.assertEqual(3, self.mocksql_connect().cursor().execute.call_count)
+        self.assertEqual(2, self.mocksql_connect().cursor().fetchall.call_count)
+
+    def test_get_member_name_unique_present_barcode_autofix(self):
+        self.mocksql_connect().cursor().fetchall.side_effect = [[], [(self.first_name, self.last_name)]]
+
+        self.assertEqual((self.first_name, self.last_name), self.mdb.get_member(member=self.member, update_timestamp=False, autofix=True))
+        self.mocksql_connect().cursor().execute.assert_has_calls([call('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode, )), call('SELECT firstName,lastName FROM users WHERE firstName=? AND lastName=?', (self.first_name, self.last_name,)), call('UPDATE users SET barcode=? WHERE firstName=? AND lastName=?', (self.barcode, self.first_name, self.last_name))])
+        self.assertEqual(3, self.mocksql_connect().cursor().execute.call_count)
+        self.assertEqual(2, self.mocksql_connect().cursor().fetchall.call_count)
+        self.assertTrue(self.mocksql_connect().commit.called)
 
 if __name__ == '__main__':
     unittest.main()

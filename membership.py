@@ -108,6 +108,18 @@ class MemberDatabase:
             return None, None
         return ('SELECT firstName,lastName FROM users WHERE ' + phrase, values)
 
+    def sql_search_barcode_query(self, member):
+        phrase, values = self.sql_search_barcode_phrase(member)
+        if not phrase:
+            return None, None
+        return ('SELECT firstName,lastName FROM users WHERE ' + phrase, values)
+
+    def sql_search_name_query(self, member):
+        phrase, values = self.sql_search_name_phrase(member)
+        if not phrase:
+            return None, None
+        return ('SELECT firstName,lastName FROM users WHERE ' + phrase, values)
+
     def sql_update_barcode_query(self, member):
         set_phrase, set_values = self.sql_update_barcode_phrase(member)
         search_phrase, search_values = self.sql_search_name_phrase(member)
@@ -128,49 +140,67 @@ class MemberDatabase:
             return None, None
         return ('UPDATE users SET last_attended=? WHERE ' + search_phrase, (date.today(),) + search_values)
 
-    def get_member(self, memberId, firstName=None, lastName=None, updateTimestamp=True, autoFix=False):
+    def get_member(self, barcode=None, *, member=None, update_timestamp=True, autofix=False):
         c = self.__connection.cursor()
 
-        # first try to find member by memberId, if available
-        if memberId:
-            c.execute('SELECT firstName,lastName FROM users WHERE barcode=?', (memberId,))
+        if not member:
+            if not barcode:
+                return None
+            member = Member(barcode)
+
+        # first try to find member by barcode, if available
+        query, values = self.sql_search_barcode_query(member)
+        if query:
+            c.execute(query, values)
             users = c.fetchall()
             if users:
-                # TODO dedupe if necessary
-
                 # if necessary update last_attended date
-                if (updateTimestamp):
-                    c.execute('UPDATE users SET last_attended=? WHERE barcode=?', (date.today(), memberId))
+                if update_timestamp:
+                    ts_query, ts_values = self.sql_update_last_attended_query(member)
+                    if ts_query:
+                        c.execute(ts_query, ts_values)
 
-                # if autoFix is set and both names are provided, correct names
-                if autoFix and firstName and lastName:
-                    c.execute('UPDATE users SET firstName=?, lastName=? WHERE barcode=?', (firstName, lastName, memberId))
+                # if autofix is set and both names are provided, correct names
+                if autofix:
+                    af_query, af_values = self.sql_update_name_query(member)
+                    if af_query:
+                        c.execute(af_query, af_values)
 
+                # in case we updated timestamp or names, commit
                 self.optional_commit()
 
+                # TODO dedupe if necessary
                 return users[0]
 
-        # ID lookup failed; now try finding by name
-        if not firstName or not lastName:
+        # barcode lookup failed; now try finding by name
+        query, values = self.sql_search_name_query(member)
+        if not query:
             return None
 
-        c.execute('SELECT firstName,lastName FROM users WHERE firstName=? AND lastName=?', (firstName, lastName))
+        c.execute(query, values)
         users = c.fetchall()
 
         if not users:
             return None # still nothing found
 
-        # found them so update barcode if autoFix is set
-        if autoFix and memberId:
-            c.execute('UPDATE users SET barcode=? WHERE firstName=? AND lastName=?', (memberId, firstName, lastName))
+        # found them so update last_attended if update_timestamp is set
+        if update_timestamp:
+            temp_member = member
+            temp_member.barcode = None # TODO maybe better approach for choosing selection method
+            ts_query, ts_values = self.sql_update_last_attended_query(member)
+            if ts_query:
+                c.execute(ts_query, ts_values)
+        # and barcode if autofix is set
+        if autofix and member.barcode:
+            af_query, af_values = self.sql_update_barcode_query(member)
+            c.execute(af_query, af_values)
             self.optional_commit()
 
         # TODO dedupe if necessary
-
-        return users
+        return users[0]
 
     def add_member(self, memberId, firstName, lastName, college):
-        if self.get_member(memberId, firstName=firstName, lastName=lastName, updateTimestamp=False, autoFix=True):
+        if self.get_member(memberId, firstName=firstName, lastName=lastName, update_timestamp=False, autofix=True):
             return False
 
         # if member does not exist, add them
