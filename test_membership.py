@@ -51,6 +51,8 @@ class NameTestCase(unittest.TestCase):
         self.assertNotEqual(self.short_name, self.name)
         self.assertNotEqual(self.short_name, self.long_name)
         self.assertNotEqual(self.name, self.long_name)
+        self.assertNotEqual(self.name, 4)
+        self.assertNotEqual(self.short_name, 'test')
 
 class MemberTestCase(unittest.TestCase):
     def setUp(self):
@@ -76,6 +78,9 @@ class MemberTestCase(unittest.TestCase):
         self.assertNotEqual(Member(None, name=self.name), Member(self.barcode))
         self.assertNotEqual(Member(self.barcode, name=self.name), Member(self.barcode))
         self.assertNotEqual(Member(self.barcode, name=self.name), Member('11111111', name=self.name))
+        self.assertNotEqual(Member(self.barcode, name=self.name), 4)
+        self.assertNotEqual(Member(self.barcode, name=self.name, college=self.college), 'test')
+        self.assertNotEqual(Member(self.barcode, name=self.name, college=self.college), Name('test'))
 
     def test_varargs_init(self):
         self.assertEqual(Member(None, name=self.name), Member(None, self.name.first(), self.name.last()))
