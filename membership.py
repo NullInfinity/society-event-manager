@@ -1,7 +1,11 @@
-"""MemberDatabase tracks and verifies society membership in a sqlite database"""
+"""
+socman society membership library
+
+tracks and verifies society membership in a sqlite database"""
 
 import sqlite3
 from datetime import date, datetime
+
 
 class Name:
     __sep = ' '
@@ -30,6 +34,7 @@ class Name:
     def full(self):
         return Name.__sep.join(self.names)
 
+
 class Member:
     def __init__(self, barcode, *names, name=None, college=None):
         self.barcode = barcode
@@ -50,19 +55,20 @@ class Member:
     def __ne__(self, other):
         return not self.__eq__(other)
 
+
 class MemberDatabase:
     def __init__(self, dbFile='members.db', safe=True):
         self.__connection = sqlite3.connect(dbFile)
         self.__safe = safe
 
     def __del__(self):
-        self.__connection.commit() # here use sql commit() directly: we want to commit regardless of safe
+        self.__connection.commit()  # here, commit regardless of safe
         self.__connection.close()
 
     # wrapper around sqlite3.Connection.commit():
     # commits if safe is set to True
-    # this means users can optionally disable autocommiting for potentially better
-    # performance at the cost of reduced data safety on crashes
+    # this means users can optionally disable autocommiting for potentially
+    # better performance at the cost of reduced data safety on crashes
     def optional_commit(self):
         if self.__safe:
             self.__connection.commit()
@@ -84,10 +90,12 @@ class MemberDatabase:
         if not member.barcode:
             return None, None
         return 'barcode=?', (member.barcode, )
+
     def sql_search_name_phrase(self, member):
         if not member.name:
             return None, None
         return self.sql_build_name_value_pairs(member, ' AND ')
+
     def sql_search_phrase(self, member):
         phrase, values = self.sql_search_barcode_phrase(member)
         if not phrase:
@@ -181,12 +189,12 @@ class MemberDatabase:
         users = c.fetchall()
 
         if not users:
-            return None # still nothing found
+            return None  # still nothing found
 
         # found them so update last_attended if update_timestamp is set
         if update_timestamp:
             temp_member = member
-            temp_member.barcode = None # TODO maybe better approach for choosing selection method
+            temp_member.barcode = None  # TODO find better way to choose search phrase (barcode/name)
             ts_query, ts_values = self.sql_update_last_attended_query(member)
             if ts_query:
                 c.execute(ts_query, ts_values)
@@ -212,6 +220,6 @@ class MemberDatabase:
         # if member does not exist, add them
         cursor = self.__connection.cursor()
         cursor.execute(*self.sql_add_query(member))
-        self.__connection.commit() # direct commit here: don't want to lose new member data
+        self.__connection.commit()  # direct commit here: don't want to lose new member data
 
         return True

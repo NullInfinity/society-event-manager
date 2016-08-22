@@ -3,6 +3,8 @@ import unittest
 from datetime import date, datetime
 from unittest.mock import patch, call
 from membership import Name, Member, MemberDatabase
+
+
 class NameTestCase(unittest.TestCase):
 
     def setUp(self):
