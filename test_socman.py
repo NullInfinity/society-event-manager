@@ -2,7 +2,9 @@
 import unittest
 from datetime import date, datetime
 from unittest.mock import patch, call
-from membership import Name, Member, MemberDatabase
+from socman import Member
+from socman import MemberDatabase
+from socman import Name
 
 
 class NameTestCase(unittest.TestCase):
@@ -98,7 +100,7 @@ class MemberDatabaseTestCase(unittest.TestCase):
         self.member = Member(self.barcode, self.first_name, self.last_name, college = self.college)
         self.member_nobarcode = Member(None, self.first_name, self.last_name, college = self.college)
 
-        self.mocksql_connect_patcher = patch('membership.sqlite3.connect')
+        self.mocksql_connect_patcher = patch('socman.sqlite3.connect')
         self.mocksql_connect = self.mocksql_connect_patcher.start()
         self.addCleanup(self.mocksql_connect_patcher.stop)
 
@@ -166,7 +168,7 @@ class MemberDatabaseTestCase(unittest.TestCase):
         self.assertEqual((None, None), self.mdb.sql_update_name_query(Member(None)))
         self.assertEqual(('UPDATE users SET firstName=?,lastName=? WHERE barcode=?', (self.first_name, self.last_name, self.barcode)), self.mdb.sql_update_name_query(Member(self.barcode, self.first_name, self.last_name)))
 
-    @patch('membership.date')
+    @patch('socman.date')
     def test_update_last_attended_query(self, mock_date):
         mock_date.today.return_value = date.min
 
@@ -253,7 +255,7 @@ class MemberDatabaseTestCase(unittest.TestCase):
         self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
         self.assertTrue(self.mocksql_connect().commit.called)
 
-    @patch('membership.date')
+    @patch('socman.date')
     def test_get_member_barcode_present_unique_update_timestamp(self, mock_date):
         mock_date.today.return_value = date.min
         self.mocksql_connect().cursor().fetchall.return_value = [(self.first_name, self.last_name)]
@@ -315,7 +317,7 @@ class MemberDatabaseTestCase(unittest.TestCase):
         self.assertEqual(2, self.mocksql_connect().cursor().execute.call_count)
         self.assertEqual(2, self.mocksql_connect().cursor().fetchall.call_count)
 
-    @patch('membership.date')
+    @patch('socman.date')
     def test_get_member_name_unique_present_barcode_update_timestamp(self, mock_date):
         self.mocksql_connect().cursor().fetchall.side_effect = [[], [(self.first_name, self.last_name)]]
         mock_date.today.return_value = date.min
@@ -342,8 +344,8 @@ class MemberDatabaseTestCase(unittest.TestCase):
         self.assertFalse(self.mdb.add_member(self.member))
         self.assertEqual(2, self.mocksql_connect().cursor().execute.call_count)
 
-    @patch('membership.datetime')
-    @patch('membership.date')
+    @patch('socman.datetime')
+    @patch('socman.date')
     def test_add_member_new(self, mock_date, mock_datetime):
         self.mocksql_connect().cursor().fetchall.return_value = []
         mock_date.today.return_value = date.min
