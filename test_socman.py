@@ -19,10 +19,27 @@ class NameTestCase(unittest.TestCase):
         self.long_name = Name(self.first_name, self.middle_name, self.last_name)
 
     def test_falsiness(self):
-        self.assertFalse(self.empty_name)
-        self.assertTrue(self.short_name)
-        self.assertTrue(self.name)
-        self.assertTrue(self.long_name)
+        self.assertFalse(Name())
+        self.assertTrue(Name(self.last_name))
+        self.assertTrue(Name(self.first_name, self.last_name))
+        self.assertTrue(Name(self.first_name, self.middle_name, self.last_name))
+        self.assertTrue(Name(self.first_name, ''))
+
+    def test_equality(self):
+        self.assertEqual(Name(), Name())
+        self.assertEqual(Name(self.last_name), Name(self.last_name))
+        self.assertEqual(Name(self.first_name, self.last_name), Name(self.first_name, self.last_name))
+        self.assertEqual(Name(self.first_name, self.middle_name, self.last_name), Name(self.first_name, self.middle_name, self.last_name))
+        self.assertEqual(Name(self.first_name, None), Name(self.first_name, None))
+
+    def test_inequality(self):
+        self.assertNotEqual(Name(), Name(self.last_name))
+        self.assertNotEqual(Name(), Name(self.first_name, self.last_name))
+        self.assertNotEqual(Name(self.last_name), Name(self.first_name, self.last_name))
+        self.assertNotEqual(Name(self.last_name), self.long_name)
+        self.assertNotEqual(Name(self.first_name, None), Name(self.first_name))
+        self.assertNotEqual(self.name, 4)
+        self.assertNotEqual(self.short_name, 'test')
 
     def test_first(self):
         self.assertEqual('', self.empty_name.first())
@@ -42,21 +59,6 @@ class NameTestCase(unittest.TestCase):
         self.assertEqual(self.first_name + ' ' + self.last_name, self.name.full())
         self.assertEqual(self.first_name + ' ' + self.middle_name + ' ' + self.last_name, self.long_name.full())
 
-    def test_equality(self):
-        self.assertEqual(self.empty_name, Name())
-        self.assertEqual(self.short_name, Name(self.last_name))
-        self.assertEqual(self.name, Name(self.first_name, self.last_name))
-        self.assertEqual(self.long_name, Name(self.first_name, self.middle_name, self.last_name))
-
-    def test_inequality(self):
-        self.assertNotEqual(self.empty_name, self.short_name)
-        self.assertNotEqual(self.empty_name, self.name)
-        self.assertNotEqual(self.empty_name, self.long_name)
-        self.assertNotEqual(self.short_name, self.name)
-        self.assertNotEqual(self.short_name, self.long_name)
-        self.assertNotEqual(self.name, self.long_name)
-        self.assertNotEqual(self.name, 4)
-        self.assertNotEqual(self.short_name, 'test')
 
 class MemberTestCase(unittest.TestCase):
     def setUp(self):
