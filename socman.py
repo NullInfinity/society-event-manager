@@ -28,6 +28,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
+from collections import namedtuple
 from datetime import date, datetime
 import sqlite3
 
@@ -105,48 +106,33 @@ class Name:
         return self.__makestr(self.names)
 
 
-class Member:
+Member = namedtuple('Member', 'barcode name college')
+Member.__new__.__defaults__ = (None, None)
+Member.__doc__ = """
+                 A society member.
 
-    """A society member."""
-
-    def __init__(self, barcode, *names, name=None, college=None):
-        """Create a member object.
-
-        Arguments:
-            barcode     Member ID or barcode
-            names       Varargs list of names, passed to Name.__init__
-            name        The member's name. If present, `names` is ignored
-            college     The member's college
-        """
-        # TODO replace college with dictionary of arbitrary metadata
-        # TODO maybe member should just be namedtuple or dictionary
-        #      (as it contains little or no logic alongside the data)
-        #      the question is: does Member need any public methods?
-
-        self.barcode = barcode
-        if name:
-            self.name = name
-        else:
-            self.name = Name(*names)
-        self.college = college
-
-    def __bool__(self):
-        return bool(self.barcode or self.name)
-
-    def __eq__(self, other):
-        if isinstance(other, self.__class__):
-            return self.__dict__ == other.__dict__
-        return False
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
+                 `name` and `college` default to None but `barcode` must be
+                 given explicitly.
+                 """
 
 
 class MemberDatabase:
+
     """Interface to a SQLite3 database of members."""
 
-    def __init__(self, dbFile='members.db', safe=True):
-        self.__connection = sqlite3.connect(dbFile)
+    def __init__(self, db_file='members.db', safe=True):
+        """Create a MemberDatabase.
+
+        Arguments:
+            db_file     Filename and path of a SQLite3 database file.
+                        Passed directly to sqlite3.Connect().
+            safe        Boolean that determines whether non essential
+                        operations are committed immediately or not
+                        Note that important operations like adding a member
+                        are always committed regardless of this setting.
+        """
+
+        self.__connection = sqlite3.connect(db_file)
         self.__safe = safe
 
     def __del__(self):
@@ -158,12 +144,14 @@ class MemberDatabase:
     # this means users can optionally disable autocommiting for potentially
     # better performance at the cost of reduced data safety on crashes
     def optional_commit(self):
-        """Commits changes to database if in safe mode (safe=True)."""
+        """Commits changes to database if `safe` is set to `True`"""
 
         if self.__safe:
             self.__connection.commit()
 
     def sql_build_name_value_pairs(self, member, sep):
+        if not member.name:
+            return None, None
         columns = []
         values = ()
         if member.name.first():
@@ -283,9 +271,9 @@ class MemberDatabase:
 
         # found them so update last_attended if update_timestamp is set
         if update_timestamp:
-            temp_member = member
-            temp_member.barcode = None  # TODO find better way to choose search phrase (barcode/name)
-            ts_query, ts_values = self.sql_update_last_attended_query(member)
+            # todo find better way to choose search phrase (barcode/name)
+            temp_member = member._replace(barcode = None)
+            ts_query, ts_values = self.sql_update_last_attended_query(temp_member)
             if ts_query:
                 c.execute(ts_query, ts_values)
         # and barcode if autofix is set
