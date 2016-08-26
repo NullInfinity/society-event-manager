@@ -106,9 +106,23 @@ class Name:
 
 
 class Member:
+
     """A society member."""
 
     def __init__(self, barcode, *names, name=None, college=None):
+        """Create a member object.
+
+        Arguments:
+            barcode     Member ID or barcode
+            names       Varargs list of names, passed to Name.__init__
+            name        The member's name. If present, `names` is ignored
+            college     The member's college
+        """
+        # TODO replace college with dictionary of arbitrary metadata
+        # TODO maybe member should just be namedtuple or dictionary
+        #      (as it contains little or no logic alongside the data)
+        #      the question is: does Member need any public methods?
+
         self.barcode = barcode
         if name:
             self.name = name
