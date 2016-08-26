@@ -5,6 +5,7 @@ It tracks members in a sqlite database to enable membership tracking
 and verification. It can also track event data such as name and date,
 along with event attendance statistics.
 
+
 The MIT License (MIT)
 
 Copyright (c) 2016 Alexander Thorne
