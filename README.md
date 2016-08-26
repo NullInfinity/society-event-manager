@@ -1,12 +1,12 @@
-[![Build Status](https://travis-ci.org/NullInfinity/socman.py.svg?branch=master)](https://travis-ci.org/NullInfinity/socman.py)
-[![Coverage Status](https://coveralls.io/repos/github/NullInfinity/socman.py/badge.svg?branch=master)](https://coveralls.io/github/NullInfinity/socman.py?branch=master)
-[![Code Health](https://landscape.io/github/NullInfinity/socman.py/master/landscape.svg?style=flat)](https://landscape.io/github/NullInfinity/socman.py/master)
+[![Build Status](https://travis-ci.org/NullInfinity/socman.svg?branch=master)](https://travis-ci.org/NullInfinity/socman)
+[![Coverage Status](https://coveralls.io/repos/github/NullInfinity/socman/badge.svg?branch=master)](https://coveralls.io/github/NullInfinity/socman?branch=master)
+[![Code Health](https://landscape.io/github/NullInfinity/socman/master/landscape.svg?style=flat)](https://landscape.io/github/NullInfinity/socman/master)
 
-# socman.py #
+# socman #
 
 ### What is this repository for? ###
 
-* This repository contains the source for socman.py, the society membership tracker
+* This repository contains the source for socman, the society membership tracker
 * It tracks attendance of events and checks membership using IDs or barcode numbers.
 * I created this software as IT secretary for the [Oxford Invariants Mathematical Society](http://invariants.org.uk/) in order to record and verify membership status
 * Licensed under the MIT licence (see licence.txt).

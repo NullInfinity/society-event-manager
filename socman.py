@@ -1,17 +1,70 @@
 """
-socman society membership library
+socman is a society membership and event management library.
 
-tracks and verifies society membership in a sqlite database"""
+It tracks members in a sqlite database to enable membership tracking
+and verification. It can also track event data such as name and date,
+along with event attendance statistics.
 
-import sqlite3
+The MIT License (MIT)
+
+Copyright (c) 2016 Alexander Thorne
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
 from datetime import date, datetime
+import sqlite3
 
 
 class Name:
-    __sep = ' '
 
-    def __init__(self, *names):
+    """A person's name."""
+
+    def __init__(self, *names, sep=' '):
+        """Create a name from a tuple of strings (passed as variable arguments).
+
+        Arguments:
+            names   A list of names which should be strings (or None)
+            sep     The separator between names when concatenated to form strings.
+
+        To create a name with just a first name, pass None as the last name:
+
+        >>> my_name = Name('Ted', None)     # Ted is first name
+        >>> my_name = Name('Ted')           # Ted is last name
+
+        The full name string will be 'Ted' in both cases above.
+        Similarly, to create a name with just a middle name, pass
+        None as both the first and the last name:
+
+        >>> my_name = Name(None, 'Ted', None)
+
+        Any number of None names may be passed, as they are ignored when
+        building name strings (except for place holding first/last names).
+        """
+        # None names in list have semantic value, but if list contains only
+        # Nones then the Name constructed should be identical to the empty
+        # Name constructed by Name()
+        if not [name for name in names if name is not None]:
+            names = ()
+
         self.names = list(names)
+        self.sep = sep
 
     def __bool__(self):
         return bool(self.names)
@@ -24,18 +77,37 @@ class Name:
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    # returns first and all middle names
+    def __makestr(self, names):
+        """Return arguments concatenated together separated by Name.sep.
+
+        Arguments that equal None or are entirely whitespace are omitted.
+        """
+        return self.sep.join([name for name in names if name and name.strip()])
+
     def first(self):
-        return Name.__sep.join(self.names[:-1])
+        """Return first name as a string."""
+        return self.__makestr(self.names[:-1][:1])
+
+    def middle(self):
+        """Return middle names concatenated as a string."""
+        return self.__makestr(self.names[1:-1])
+
+    def given(self):
+        """Return first and any middle names concatenated as a string."""
+        return self.__makestr(self.names[:-1])
 
     def last(self):
-        return Name.__sep.join(self.names[-1:])
+        """Return last name as a string."""
+        return self.__makestr(self.names[-1:])
 
     def full(self):
-        return Name.__sep.join(self.names)
+        """Return full name as a string."""
+        return self.__makestr(self.names)
 
 
 class Member:
+    """A society member."""
+
     def __init__(self, barcode, *names, name=None, college=None):
         self.barcode = barcode
         if name:
@@ -57,6 +129,8 @@ class Member:
 
 
 class MemberDatabase:
+    """Interface to a SQLite3 database of members."""
+
     def __init__(self, dbFile='members.db', safe=True):
         self.__connection = sqlite3.connect(dbFile)
         self.__safe = safe
@@ -70,6 +144,8 @@ class MemberDatabase:
     # this means users can optionally disable autocommiting for potentially
     # better performance at the cost of reduced data safety on crashes
     def optional_commit(self):
+        """Commits changes to database if in safe mode (safe=True)."""
+
         if self.__safe:
             self.__connection.commit()
 

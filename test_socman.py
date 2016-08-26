@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-import unittest
+
 from datetime import date, datetime
-from unittest.mock import patch, call
-from membership import Name, Member, MemberDatabase
+import unittest
+from unittest.mock import call, patch
+
+from socman import Member, MemberDatabase, Name
 
 
 class NameTestCase(unittest.TestCase):
+    """Test cases for socman.Name"""
 
     def setUp(self):
         self.first_name = 'Ted'
@@ -17,44 +20,124 @@ class NameTestCase(unittest.TestCase):
         self.long_name = Name(self.first_name, self.middle_name, self.last_name)
 
     def test_falsiness(self):
-        self.assertFalse(self.empty_name)
-        self.assertTrue(self.short_name)
-        self.assertTrue(self.name)
-        self.assertTrue(self.long_name)
-
-    def test_first(self):
-        self.assertEqual('', self.empty_name.first())
-        self.assertEqual('', self.short_name.first())
-        self.assertEqual(self.first_name, self.name.first())
-        self.assertEqual(self.first_name + ' ' + self.middle_name, self.long_name.first())
-
-    def test_last(self):
-        self.assertEqual('', self.empty_name.last())
-        self.assertEqual(self.last_name, self.short_name.last())
-        self.assertEqual(self.last_name, self.name.last())
-        self.assertEqual(self.last_name, self.long_name.last())
-
-    def test_full(self):
-        self.assertEqual('', self.empty_name.full())
-        self.assertEqual(self.last_name, self.short_name.full())
-        self.assertEqual(self.first_name + ' ' + self.last_name, self.name.full())
-        self.assertEqual(self.first_name + ' ' + self.middle_name + ' ' + self.last_name, self.long_name.full())
+        self.assertFalse(Name())
+        self.assertTrue(Name(self.last_name))
+        self.assertTrue(Name(self.first_name, self.last_name))
+        self.assertTrue(Name(self.first_name, ''))
 
     def test_equality(self):
-        self.assertEqual(self.empty_name, Name())
-        self.assertEqual(self.short_name, Name(self.last_name))
-        self.assertEqual(self.name, Name(self.first_name, self.last_name))
-        self.assertEqual(self.long_name, Name(self.first_name, self.middle_name, self.last_name))
+        self.assertEqual(Name(), Name())
+        self.assertEqual(Name(self.last_name), Name(self.last_name))
+        self.assertEqual(Name(self.first_name, self.last_name),
+                         Name(self.first_name, self.last_name))
+        self.assertEqual(Name(self.first_name, None),
+                         Name(self.first_name, None))
 
     def test_inequality(self):
-        self.assertNotEqual(self.empty_name, self.short_name)
-        self.assertNotEqual(self.empty_name, self.name)
-        self.assertNotEqual(self.empty_name, self.long_name)
-        self.assertNotEqual(self.short_name, self.name)
-        self.assertNotEqual(self.short_name, self.long_name)
-        self.assertNotEqual(self.name, self.long_name)
-        self.assertNotEqual(self.name, 4)
-        self.assertNotEqual(self.short_name, 'test')
+        self.assertNotEqual(Name(), Name(self.last_name))
+        self.assertNotEqual(Name(), Name(self.first_name, self.last_name))
+        self.assertNotEqual(Name(self.last_name),
+                            Name(self.first_name, self.last_name))
+        self.assertNotEqual(Name(self.first_name, None),
+                            Name(self.first_name))
+        self.assertNotEqual(Name(self.first_name, self.last_name), 4)
+        self.assertNotEqual(Name(self.first_name, self.last_name), 'test')
+
+    def test_name_first_last(self):
+        name = Name(self.first_name, self.last_name)
+
+        self.assertEqual(name.names, [self.first_name, self.last_name])
+        self.assertEqual(name.first(), self.first_name)
+        self.assertEqual(name.middle(), '')
+        self.assertEqual(name.last(), self.last_name)
+        self.assertEqual(name.given(), self.first_name)
+        self.assertEqual(name.full(), self.first_name + ' ' + self.last_name)
+
+    def test_name_last_only(self):
+        name = Name(self.last_name)
+
+        self.assertEqual(name.names, [self.last_name])
+        self.assertEqual(name.first(), '')
+        self.assertEqual(name.middle(), '')
+        self.assertEqual(name.last(), self.last_name)
+        self.assertEqual(name.given(), '')
+        self.assertEqual(name.full(), self.last_name)
+
+    def test_name_first_only(self):
+        name = Name(self.first_name, None)
+
+        self.assertEqual(name.names, [self.first_name, None])
+        self.assertEqual(name.first(), self.first_name)
+        self.assertEqual(name.middle(), '')
+        self.assertEqual(name.last(), '')
+        self.assertEqual(name.given(), self.first_name)
+        self.assertEqual(name.full(), self.first_name)
+
+    def test_name_middle_only(self):
+        name = Name(None, self.middle_name, None)
+
+        self.assertEqual(name.names, [None, self.middle_name, None])
+        self.assertEqual(name.first(), '')
+        self.assertEqual(name.middle(), self.middle_name)
+        self.assertEqual(name.last(), '')
+        self.assertEqual(name.given(), self.middle_name)
+        self.assertEqual(name.full(), self.middle_name)
+
+    def test_name_first_middle_last(self):
+        name = Name(self.first_name, self.middle_name, self.last_name)
+
+        self.assertEqual(name.names,
+                         [self.first_name, self.middle_name, self.last_name])
+        self.assertEqual(name.first(), self.first_name)
+        self.assertEqual(name.middle(), self.middle_name)
+        self.assertEqual(name.last(), self.last_name)
+        self.assertEqual(name.given(),
+                         self.first_name + ' ' + self.middle_name)
+        self.assertEqual(name.full(), self.first_name + ' ' +
+                         self.middle_name + ' ' + self.last_name)
+
+    def test_name_first_middle_middle_last(self):
+        middle_name_other = 'Rickerton'
+        name = Name(self.first_name, self.middle_name,
+                    middle_name_other, self.last_name)
+
+        self.assertEqual(name.names,
+                         [self.first_name, self.middle_name,
+                          middle_name_other, self.last_name])
+        self.assertEqual(name.first(), self.first_name)
+        self.assertEqual(name.middle(),
+                         self.middle_name + ' ' + middle_name_other)
+        self.assertEqual(name.last(), self.last_name)
+        self.assertEqual(name.given(), self.first_name + ' ' +
+                         self.middle_name + ' ' + middle_name_other)
+        self.assertEqual(name.full(), self.first_name + ' ' +
+                         self.middle_name + ' ' + middle_name_other + ' ' +
+                         self.last_name)
+
+    def test_name_empty(self):
+        name = Name()
+
+        self.assertEqual(name.names, [])
+        self.assertEqual(name.first(), '')
+        self.assertEqual(name.middle(), '')
+        self.assertEqual(name.last(), '')
+        self.assertEqual(name.given(), '')
+        self.assertEqual(name.full(), '')
+
+    def test_name_none(self):
+        """If a name contains only None names it should be the same as an
+        empty name."""
+        self.assertEqual(Name(), Name(None))
+        self.assertEqual(Name(), Name(None, None))
+
+    def test_custom_separator(self):
+        name = Name(self.first_name, self.middle_name, self.last_name, sep='_')
+
+        self.assertEqual(name.given(), self.first_name + '_' +
+                         self.middle_name)
+        self.assertEqual(name.full(), self.first_name + '_' +
+                         self.middle_name + '_' + self.last_name)
+
 
 class MemberTestCase(unittest.TestCase):
     def setUp(self):
@@ -98,7 +181,7 @@ class MemberDatabaseTestCase(unittest.TestCase):
         self.member = Member(self.barcode, self.first_name, self.last_name, college = self.college)
         self.member_nobarcode = Member(None, self.first_name, self.last_name, college = self.college)
 
-        self.mocksql_connect_patcher = patch('membership.sqlite3.connect')
+        self.mocksql_connect_patcher = patch('socman.sqlite3.connect')
         self.mocksql_connect = self.mocksql_connect_patcher.start()
         self.addCleanup(self.mocksql_connect_patcher.stop)
 
@@ -166,7 +249,7 @@ class MemberDatabaseTestCase(unittest.TestCase):
         self.assertEqual((None, None), self.mdb.sql_update_name_query(Member(None)))
         self.assertEqual(('UPDATE users SET firstName=?,lastName=? WHERE barcode=?', (self.first_name, self.last_name, self.barcode)), self.mdb.sql_update_name_query(Member(self.barcode, self.first_name, self.last_name)))
 
-    @patch('membership.date')
+    @patch('socman.date')
     def test_update_last_attended_query(self, mock_date):
         mock_date.today.return_value = date.min
 
@@ -253,7 +336,7 @@ class MemberDatabaseTestCase(unittest.TestCase):
         self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
         self.assertTrue(self.mocksql_connect().commit.called)
 
-    @patch('membership.date')
+    @patch('socman.date')
     def test_get_member_barcode_present_unique_update_timestamp(self, mock_date):
         mock_date.today.return_value = date.min
         self.mocksql_connect().cursor().fetchall.return_value = [(self.first_name, self.last_name)]
@@ -315,7 +398,7 @@ class MemberDatabaseTestCase(unittest.TestCase):
         self.assertEqual(2, self.mocksql_connect().cursor().execute.call_count)
         self.assertEqual(2, self.mocksql_connect().cursor().fetchall.call_count)
 
-    @patch('membership.date')
+    @patch('socman.date')
     def test_get_member_name_unique_present_barcode_update_timestamp(self, mock_date):
         self.mocksql_connect().cursor().fetchall.side_effect = [[], [(self.first_name, self.last_name)]]
         mock_date.today.return_value = date.min
@@ -342,8 +425,8 @@ class MemberDatabaseTestCase(unittest.TestCase):
         self.assertFalse(self.mdb.add_member(self.member))
         self.assertEqual(2, self.mocksql_connect().cursor().execute.call_count)
 
-    @patch('membership.datetime')
-    @patch('membership.date')
+    @patch('socman.datetime')
+    @patch('socman.date')
     def test_add_member_new(self, mock_date, mock_datetime):
         self.mocksql_connect().cursor().fetchall.return_value = []
         mock_date.today.return_value = date.min

@@ -9,5 +9,5 @@ install:
   - pip install coveralls
 os:
   - linux
-script: coverage run --source=membership test_membership.py
+script: coverage run --source=socman test_socman.py
 after_success: coveralls
