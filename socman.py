@@ -106,6 +106,8 @@ class Name:
 
 
 class Member:
+    """A society member."""
+
     def __init__(self, barcode, *names, name=None, college=None):
         self.barcode = barcode
         if name:
@@ -127,6 +129,8 @@ class Member:
 
 
 class MemberDatabase:
+    """Interface to a SQLite3 database of members."""
+
     def __init__(self, dbFile='members.db', safe=True):
         self.__connection = sqlite3.connect(dbFile)
         self.__safe = safe
@@ -140,6 +144,8 @@ class MemberDatabase:
     # this means users can optionally disable autocommiting for potentially
     # better performance at the cost of reduced data safety on crashes
     def optional_commit(self):
+        """Commits changes to database if in safe mode (safe=True)."""
+
         if self.__safe:
             self.__connection.commit()
 
