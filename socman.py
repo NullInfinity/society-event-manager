@@ -33,10 +33,38 @@ import sqlite3
 
 
 class Name:
-    __sep = ' '
+    """A person's name."""
 
-    def __init__(self, *names):
+    def __init__(self, *names, sep=' '):
+        """Create a name from a tuple of strings (passed as variable arguments).
+
+        Arguments:
+            names   A list of names which should be strings (or None)
+            sep     The separator between names when concatenated to form strings.
+
+        To create a name with just a first name, pass None as the last name:
+
+        >>> my_name = Name('Ted', None)     # Ted is first name
+        >>> my_name = Name('Ted')           # Ted is last name
+
+        The full name string will be 'Ted' in both cases above.
+        Similarly, to create a name with just a middle name, pass
+        None as both the first and the last name:
+
+        >>> my_name = Name(None, 'Ted', None)
+
+        Any number of None names may be passed, as they are ignored when
+        building name strings (except for place holding first/last names).
+        """
+
+        # None names in list have semantic value, but if list contains only
+        # Nones then the Name constructed should be identical to the empty
+        # Name constructed by Name()
+        if not list(filter(None, names)):
+            names = ()
+
         self.names = list(names)
+        self.sep = sep
 
     def __bool__(self):
         return bool(self.names)
@@ -49,15 +77,32 @@ class Name:
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    # returns first and all middle names
+    def __makestr(self, names):
+        """Return arguments concatenated together separated by Name.sep.
+
+        Arguments that equal None or are entirely whitespace are omitted.
+        """
+        return self.sep.join([name for name in names if name and name.strip()])
+
     def first(self):
-        return Name.__sep.join(self.names[:-1])
+        """Return first name as a string."""
+        return self.__makestr(self.names[:-1][:1])
+
+    def middle(self):
+        """Return middle names concatenated as a string."""
+        return self.__makestr(self.names[1:-1])
+
+    def given(self):
+        """Return given (first and middle) names concatenated as a string."""
+        return self.__makestr(self.names[:-1])
 
     def last(self):
-        return Name.__sep.join(self.names[-1:])
+        """Return last name as a string."""
+        return self.__makestr(self.names[-1:])
 
     def full(self):
-        return Name.__sep.join(self.names)
+        """Return full name as a string."""
+        return self.__makestr(self.names)
 
 
 class Member:

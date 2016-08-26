@@ -8,6 +8,7 @@ from socman import Member, MemberDatabase, Name
 
 
 class NameTestCase(unittest.TestCase):
+    """Test cases for socman.Name"""
 
     def setUp(self):
         self.first_name = 'Ted'
@@ -22,42 +23,120 @@ class NameTestCase(unittest.TestCase):
         self.assertFalse(Name())
         self.assertTrue(Name(self.last_name))
         self.assertTrue(Name(self.first_name, self.last_name))
-        self.assertTrue(Name(self.first_name, self.middle_name, self.last_name))
         self.assertTrue(Name(self.first_name, ''))
 
     def test_equality(self):
         self.assertEqual(Name(), Name())
         self.assertEqual(Name(self.last_name), Name(self.last_name))
-        self.assertEqual(Name(self.first_name, self.last_name), Name(self.first_name, self.last_name))
-        self.assertEqual(Name(self.first_name, self.middle_name, self.last_name), Name(self.first_name, self.middle_name, self.last_name))
-        self.assertEqual(Name(self.first_name, None), Name(self.first_name, None))
+        self.assertEqual(Name(self.first_name, self.last_name),
+                         Name(self.first_name, self.last_name))
+        self.assertEqual(Name(self.first_name, None),
+                         Name(self.first_name, None))
 
     def test_inequality(self):
         self.assertNotEqual(Name(), Name(self.last_name))
         self.assertNotEqual(Name(), Name(self.first_name, self.last_name))
-        self.assertNotEqual(Name(self.last_name), Name(self.first_name, self.last_name))
-        self.assertNotEqual(Name(self.last_name), self.long_name)
-        self.assertNotEqual(Name(self.first_name, None), Name(self.first_name))
-        self.assertNotEqual(self.name, 4)
-        self.assertNotEqual(self.short_name, 'test')
+        self.assertNotEqual(Name(self.last_name),
+                            Name(self.first_name, self.last_name))
+        self.assertNotEqual(Name(self.first_name, None),
+                            Name(self.first_name))
+        self.assertNotEqual(Name(self.first_name, self.last_name), 4)
+        self.assertNotEqual(Name(self.first_name, self.last_name), 'test')
 
-    def test_first(self):
-        self.assertEqual('', self.empty_name.first())
-        self.assertEqual('', self.short_name.first())
-        self.assertEqual(self.first_name, self.name.first())
-        self.assertEqual(self.first_name + ' ' + self.middle_name, self.long_name.first())
+    def test_name_first_last(self):
+        name = Name(self.first_name, self.last_name)
 
-    def test_last(self):
-        self.assertEqual('', self.empty_name.last())
-        self.assertEqual(self.last_name, self.short_name.last())
-        self.assertEqual(self.last_name, self.name.last())
-        self.assertEqual(self.last_name, self.long_name.last())
+        self.assertEqual(name.names, [self.first_name, self.last_name])
+        self.assertEqual(name.first(), self.first_name)
+        self.assertEqual(name.middle(), '')
+        self.assertEqual(name.last(), self.last_name)
+        self.assertEqual(name.given(), self.first_name)
+        self.assertEqual(name.full(), self.first_name + ' ' + self.last_name)
 
-    def test_full(self):
-        self.assertEqual('', self.empty_name.full())
-        self.assertEqual(self.last_name, self.short_name.full())
-        self.assertEqual(self.first_name + ' ' + self.last_name, self.name.full())
-        self.assertEqual(self.first_name + ' ' + self.middle_name + ' ' + self.last_name, self.long_name.full())
+    def test_name_last_only(self):
+        name = Name(self.last_name)
+
+        self.assertEqual(name.names, [self.last_name])
+        self.assertEqual(name.first(), '')
+        self.assertEqual(name.middle(), '')
+        self.assertEqual(name.last(), self.last_name)
+        self.assertEqual(name.given(), '')
+        self.assertEqual(name.full(), self.last_name)
+
+    def test_name_first_only(self):
+        name = Name(self.first_name, None)
+
+        self.assertEqual(name.names, [self.first_name, None])
+        self.assertEqual(name.first(), self.first_name)
+        self.assertEqual(name.middle(), '')
+        self.assertEqual(name.last(), '')
+        self.assertEqual(name.given(), self.first_name)
+        self.assertEqual(name.full(), self.first_name)
+
+    def test_name_middle_only(self):
+        name = Name(None, self.middle_name, None)
+
+        self.assertEqual(name.names, [None, self.middle_name, None])
+        self.assertEqual(name.first(), '')
+        self.assertEqual(name.middle(), self.middle_name)
+        self.assertEqual(name.last(), '')
+        self.assertEqual(name.given(), self.middle_name)
+        self.assertEqual(name.full(), self.middle_name)
+
+    def test_name_first_middle_last(self):
+        name = Name(self.first_name, self.middle_name, self.last_name)
+
+        self.assertEqual(name.names,
+                         [self.first_name, self.middle_name, self.last_name])
+        self.assertEqual(name.first(), self.first_name)
+        self.assertEqual(name.middle(), self.middle_name)
+        self.assertEqual(name.last(), self.last_name)
+        self.assertEqual(name.given(),
+                         self.first_name + ' ' + self.middle_name)
+        self.assertEqual(name.full(), self.first_name + ' ' +
+                         self.middle_name + ' ' + self.last_name)
+
+    def test_name_first_middle_middle_last(self):
+        middle_name_other = 'Rickerton'
+        name = Name(self.first_name, self.middle_name,
+                    middle_name_other, self.last_name)
+
+        self.assertEqual(name.names,
+                         [self.first_name, self.middle_name,
+                          middle_name_other, self.last_name])
+        self.assertEqual(name.first(), self.first_name)
+        self.assertEqual(name.middle(),
+                         self.middle_name + ' ' + middle_name_other)
+        self.assertEqual(name.last(), self.last_name)
+        self.assertEqual(name.given(), self.first_name + ' ' +
+                         self.middle_name + ' ' + middle_name_other)
+        self.assertEqual(name.full(), self.first_name + ' ' +
+                         self.middle_name + ' ' + middle_name_other + ' ' +
+                         self.last_name)
+
+    def test_name_empty(self):
+        name = Name()
+
+        self.assertEqual(name.names, [])
+        self.assertEqual(name.first(), '')
+        self.assertEqual(name.middle(), '')
+        self.assertEqual(name.last(), '')
+        self.assertEqual(name.given(), '')
+        self.assertEqual(name.full(), '')
+
+    def test_name_none(self):
+        """If a name contains only None names it should be the same as an
+        empty name."""
+        self.assertEqual(Name(), Name(None))
+        self.assertEqual(Name(), Name(None, None))
+
+    def test_custom_separator(self):
+        name = Name(self.first_name, self.middle_name, self.last_name, sep='_')
+
+        self.assertEqual(name.given(), self.first_name + '_' +
+                         self.middle_name)
+        self.assertEqual(name.full(), self.first_name + '_' +
+                         self.middle_name + '_' + self.last_name)
 
 
 class MemberTestCase(unittest.TestCase):
