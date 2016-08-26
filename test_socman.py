@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-import unittest
+
 from datetime import date, datetime
-from unittest.mock import patch, call
-from socman import Member
-from socman import MemberDatabase
-from socman import Name
+import unittest
+from unittest.mock import call, patch
+
+from socman import Member, MemberDatabase, Name
 
 
 class NameTestCase(unittest.TestCase):
