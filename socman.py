@@ -33,6 +33,7 @@ import sqlite3
 
 
 class Name:
+
     """A person's name."""
 
     def __init__(self, *names, sep=' '):
@@ -56,11 +57,10 @@ class Name:
         Any number of None names may be passed, as they are ignored when
         building name strings (except for place holding first/last names).
         """
-
         # None names in list have semantic value, but if list contains only
         # Nones then the Name constructed should be identical to the empty
         # Name constructed by Name()
-        if not list(filter(None, names)):
+        if not [name for name in names if name is not None]:
             names = ()
 
         self.names = list(names)
@@ -93,7 +93,7 @@ class Name:
         return self.__makestr(self.names[1:-1])
 
     def given(self):
-        """Return given (first and middle) names concatenated as a string."""
+        """Return first and any middle names concatenated as a string."""
         return self.__makestr(self.names[:-1])
 
     def last(self):
