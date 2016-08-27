@@ -1,11 +1,9 @@
 [![Build Status](https://travis-ci.org/NullInfinity/socman.svg?branch=master)](https://travis-ci.org/NullInfinity/socman)
 [![Coverage Status](https://coveralls.io/repos/github/NullInfinity/socman/badge.svg?branch=master)](https://coveralls.io/github/NullInfinity/socman?branch=master)
 [![Code Health](https://landscape.io/github/NullInfinity/socman/master/landscape.svg?style=flat)](https://landscape.io/github/NullInfinity/socman/master)
+[![license](https://img.shields.io/github/license/NullInfinity/socman.svg)](https://github.com/NullInfinity/socman/blob/master/LICENSE.txt)
 
 # socman
-
-* Licensed under the MIT licence (see LICENSE.txt)
-* Version 0.1
 
 socman is a society membership and attendance tracking library for Python,
 which tracks members in a SQLite3 database.
@@ -17,6 +15,7 @@ existing code. Major targets for version 0.2 are:
 * use py.test for testing
 * support OSX and Windows for automated testing
 * simplify logic in MemberDatabase
+* publish the library on PyPI
 
 Longer term goals (for inclusion by version 1.0) include:
 
