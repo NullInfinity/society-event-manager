@@ -4,15 +4,24 @@
 
 # socman
 
-* socman is a society membership and attendance tracking library for Python
-* It tracks members in a SQLite3 database
-* In future it will also support tracking event metadata in text files
-* There will also be CLI and GUI frontends with support for custom society branding
-
-* I created this software as IT secretary for the [Oxford Invariants Mathematical Society](http://invariants.org.uk/) in order to record and verify membership status
-
-* Licensed under the MIT licence (see LICENSE.txt).
+* Licensed under the MIT licence (see LICENSE.txt)
 * Version 0.1
+
+socman is a society membership and attendance tracking library for Python,
+which tracks members in a SQLite3 database.
+
+### Planned Features
+At present the main goal is to stabilise current functionality and refactor
+existing code. Major targets for version 0.2 are:
+
+* use py.test for testing
+* support OSX and Windows for automated testing
+* simplify logic in MemberDatabase
+
+Longer term goals (for inclusion by version 1.0) include:
+
+* tracking event metadata in text files
+* CLI and GUI frontends with support for custom society branding
 
 ## Installation
 
@@ -21,5 +30,5 @@ the library will be made available via PyPI.
 
 ## Maintainers ##
 
-* This repository is maintained by [Alex Thorne](https://alexthorne.net/) ([email](mailto:alex@alexthorne.net)).
-* Please get in touch with feature requests, bug reports, etc (and if you have any improvements please make a pull request!)
+This repository is maintained by [Alex Thorne](https://alexthorne.net/) ([email](mailto:alex@alexthorne.net)).
+Please get in touch with feature requests, bug reports, etc (and if you have any improvements please make a pull request!)
