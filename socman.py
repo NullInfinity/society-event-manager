@@ -34,16 +34,47 @@ from datetime import date, datetime
 import sqlite3
 
 
+class Error(Exception):
+    """The base class for exceptions in socman."""
+
+
+class BadMemberError(Error):
+    """Raised when a bad (typically None) member is passed.
+
+    Attributes:
+        member: the bad member object
+    """
+
+    def __init__(self, member):
+        self.member = member
+
+
+class MemberNotFoundError(Error):
+    """Raised when a member is not found in the database.
+
+    Attribues:
+        member: the member object
+    """
+
+    def __init__(self, member):
+        self.member = member
+
+
 class Name:
 
-    """A person's name."""
+    """A person's name.
+
+    Attributes:
+        names:  a list of strings representing names
+        sep:    the separator string to be used when concatenating names
+    """
 
     def __init__(self, *names, sep=' '):
         """Create a name from a tuple of strings (passed as variable arguments).
 
         Arguments:
-            names   A list of names which should be strings (or None)
-            sep     The separator between names when concatenated to form strings.
+            names:  A list of names which should be strings (or None)
+            sep:    The separator between names when concatenated to form strings.
 
         To create a name with just a first name, pass None as the last name:
 
@@ -80,9 +111,9 @@ class Name:
         return not self.__eq__(other)
 
     def __makestr(self, names):
-        """Return arguments concatenated together separated by Name.sep.
+        """Return arguments concatenated together separated by `self.sep`.
 
-        Arguments that equal None or are entirely whitespace are omitted.
+        Arguments that equal `None` or are entirely whitespace are omitted.
         """
         return self.sep.join([name for name in names if name and name.strip()])
 
@@ -125,9 +156,9 @@ class MemberDatabase:
         """Create a MemberDatabase.
 
         Arguments:
-            db_file     Filename and path of a SQLite3 database file.
+            db_file:    Filename and path of a SQLite3 database file.
                         Passed directly to sqlite3.Connect().
-            safe        Boolean that determines whether non essential
+            safe:       Boolean that determines whether non essential
                         operations are committed immediately or not
                         Note that important operations like adding a member
                         are always committed regardless of this setting.
@@ -140,10 +171,6 @@ class MemberDatabase:
         self.__connection.commit()  # here, commit regardless of safe
         self.__connection.close()
 
-    # wrapper around sqlite3.Connection.commit():
-    # commits if safe is set to True
-    # this means users can optionally disable autocommiting for potentially
-    # better performance at the cost of reduced data safety on crashes
     def optional_commit(self):
 
         """Commits changes to database if `safe` is set to `True`.
@@ -191,7 +218,7 @@ class MemberDatabase:
     def __sql_update_barcode_phrase(self, member):
         if not member.barcode:
             return None, None
-        return ('barcode=?', (member.barcode,) )
+        return ('barcode=?', (member.barcode,))
 
     def __sql_update_name_phrase(self, member):
         return self.__sql_build_name_value_pairs(member, ',')
@@ -234,31 +261,67 @@ class MemberDatabase:
             return None, None
         return ('UPDATE users SET last_attended=? WHERE ' + search_phrase, (date.today(),) + search_values)
 
-    def get_member(self, barcode=None, *, member=None, update_timestamp=True, autofix=False):
-        c = self.__connection.cursor()
+    def get_member(self, member=None, update_timestamp=True, autofix=False):
+        """Retrieve a member's names from the database.
 
-        if not member:
-            if not barcode:
-                return None
-            member = Member(barcode)
+        Arguments:
+            member:     a member object to search for, should contain either
+                        barcode, name or both
+            update_timestamp:   determines whether to update the record's
+                                timestamp in the database when retrieved
+            autofix:    determines whether to fix broken records (see below)
+
+        Returns:
+            A tuple containing the member's first and last names as strings.
+
+        Raises:
+            MemberNotFoundError: A member was not found in a database lookup
+            BadMemberError: The member passed to `get_member` has neither name
+                            nor barcode.
+
+        The Lookup
+        ----------
+        The barcode always takes precedence where possible. If both a name and
+        barcode are supplied in `member` then the lookup will be done by
+        barcode, and only if that lookup fails will the name be used.
+        If only a name is provided, it will of course be used for lookup.
+
+        Autofixing
+        ----------
+        If the barcode lookup succeeds and a name is also provided, the autofix
+        mechanism will update the name in the database record using the name
+        provided. Similarly, if barcode lookup fails but name lookup succeeds,
+        then the barcode will be updated on any records found.
+
+        Duplicate Records
+        -----------------
+        At this time, `get_member` does not attempt to autofix duplicate
+        records. This should be implemented at a future date.
+        """
+        # TODO implement deduping and better handling of duplicate records
+
+        cursor = self.__connection.cursor()
+
+        if not member or not member.barcode and not member.name:
+            raise BadMemberError(member)
 
         # first try to find member by barcode, if available
         query, values = self.__sql_search_barcode_query(member)
         if query:
-            c.execute(query, values)
-            users = c.fetchall()
+            cursor.execute(query, values)
+            users = cursor.fetchall()
             if users:
                 # if necessary update last_attended date
                 if update_timestamp:
                     ts_query, ts_values = self.__sql_update_last_attended_query(member)
                     if ts_query:
-                        c.execute(ts_query, ts_values)
+                        cursor.execute(ts_query, ts_values)
 
                 # if autofix is set and both names are provided, correct names
                 if autofix:
                     af_query, af_values = self.__sql_update_name_query(member)
                     if af_query:
-                        c.execute(af_query, af_values)
+                        cursor.execute(af_query, af_values)
 
                 # in case we updated timestamp or names, commit
                 self.optional_commit()
@@ -269,25 +332,25 @@ class MemberDatabase:
         # barcode lookup failed; now try finding by name
         query, values = self.__sql_search_name_query(member)
         if not query:
-            return None
+            raise MemberNotFoundError(member)
 
-        c.execute(query, values)
-        users = c.fetchall()
+        cursor.execute(query, values)
+        users = cursor.fetchall()
 
         if not users:
-            return None  # still nothing found
+            raise MemberNotFoundError(member)
 
         # found them so update last_attended if update_timestamp is set
         if update_timestamp:
             # todo find better way to choose search phrase (barcode/name)
-            temp_member = member._replace(barcode = None)
+            temp_member = member._replace(barcode=None)
             ts_query, ts_values = self.__sql_update_last_attended_query(temp_member)
             if ts_query:
-                c.execute(ts_query, ts_values)
+                cursor.execute(ts_query, ts_values)
         # and barcode if autofix is set
         if autofix and member.barcode:
             af_query, af_values = self.__sql_update_barcode_query(member)
-            c.execute(af_query, af_values)
+            cursor.execute(af_query, af_values)
             self.optional_commit()
 
         # TODO dedupe if necessary
@@ -297,15 +360,38 @@ class MemberDatabase:
         return 'INSERT INTO users (barcode, firstName, lastName, college, datejoined, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)', (member.barcode, member.name.first(), member.name.last(), member.college, date.today(), datetime.utcnow(), datetime.utcnow())
 
     def add_member(self, member):
-        if not member:
-            return False
+        """Add a member to the database.
 
-        if self.get_member(member=member, update_timestamp=False, autofix=True):
-            return False
+        First the member is looked up with `get_member`. If found, autofixing
+        is applied and then the member is returned. If the member is not found,
+        he/she will be added to the database.
 
-        # if member does not exist, add them
+        See `get_member` for details of the lookup and autofix mechanism.
+
+        Arguments:
+            member:     a member object to add, should contain either at least
+                        one of a name and a barcode
+        Returns:
+            Nothing.
+
+        Raises:
+            BadMemberError: The member passed to `get_member` has neither name
+                            nor barcode.
+        """
+
+        if not member or not member.barcode or not member.name:
+            raise BadMemberError(member)
+
+        try:
+            self.get_member(member=member, update_timestamp=True, autofix=True)
+        except MemberNotFoundError:
+            pass
+        else:
+            return  # member already present so we are done
+
+        # if member does not exist, add him/her
         cursor = self.__connection.cursor()
         cursor.execute(*self.__sql_add_query(member))
-        self.__connection.commit()  # direct commit here: don't want to lose new member data
 
-        return True
+        # direct commit here: don't want to lose new member data
+        self.__connection.commit()
