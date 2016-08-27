@@ -35,10 +35,12 @@ import sqlite3
 
 
 class Error(Exception):
+
     """The base class for exceptions in socman."""
 
 
 class BadMemberError(Error):
+
     """Raised when a bad (typically None) member is passed.
 
     Attributes:
@@ -46,10 +48,12 @@ class BadMemberError(Error):
     """
 
     def __init__(self, member):
+        """Create a BadMemberError for member object `member`."""
         self.member = member
 
 
 class MemberNotFoundError(Error):
+
     """Raised when a member is not found in the database.
 
     Attribues:
@@ -57,6 +61,7 @@ class MemberNotFoundError(Error):
     """
 
     def __init__(self, member):
+        """Create a MemberNotFoundError for member object `member`."""
         self.member = member
 
 
@@ -163,7 +168,6 @@ class MemberDatabase:
                         Note that important operations like adding a member
                         are always committed regardless of this setting.
         """
-
         self.__connection = sqlite3.connect(db_file)
         self.__safe = safe
 
@@ -172,7 +176,6 @@ class MemberDatabase:
         self.__connection.close()
 
     def optional_commit(self):
-
         """Commits changes to database if `safe` is set to `True`.
 
         This means increased performance can be chosen over the highest level
@@ -180,7 +183,6 @@ class MemberDatabase:
         database every time a record is accessed. If a lot of members are
         checked, it may not be desirable to commit after every such change.
         """
-
         if self.__safe:
             self.__connection.commit()
 
@@ -299,7 +301,6 @@ class MemberDatabase:
         records. This should be implemented at a future date.
         """
         # TODO implement deduping and better handling of duplicate records
-
         cursor = self.__connection.cursor()
 
         if not member or not member.barcode and not member.name:
@@ -357,7 +358,12 @@ class MemberDatabase:
         return users[0]
 
     def __sql_add_query(self, member):
-        return 'INSERT INTO users (barcode, firstName, lastName, college, datejoined, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)', (member.barcode, member.name.first(), member.name.last(), member.college, date.today(), datetime.utcnow(), datetime.utcnow())
+        return (('INSERT INTO users (barcode, firstName, '
+                 'lastName, college, datejoined, created_at, updated_at) '
+                 'VALUES (?, ?, ?, ?, ?, ?, ?)'),
+                (member.barcode, member.name.first(), member.name.last(),
+                 member.college, date.today(), datetime.utcnow(),
+                 datetime.utcnow()))
 
     def add_member(self, member):
         """Add a member to the database.
@@ -378,7 +384,6 @@ class MemberDatabase:
             BadMemberError: The member passed to `get_member` has neither name
                             nor barcode.
         """
-
         if not member or not member.barcode or not member.name:
             raise BadMemberError(member)
 
