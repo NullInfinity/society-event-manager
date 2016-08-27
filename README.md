@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/NullInfinity/socman.svg?branch=master)](https://travis-ci.org/NullInfinity/socman)
+[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/32r7s2skrgm9ubva?svg=true)](https://ci.appveyor.com/api/projects/status/32r7s2skrgm9ubva?svg=true)
 [![Coverage Status](https://coveralls.io/repos/github/NullInfinity/socman/badge.svg?branch=master)](https://coveralls.io/github/NullInfinity/socman?branch=master)
 [![Code Health](https://landscape.io/github/NullInfinity/socman/master/landscape.svg?style=flat)](https://landscape.io/github/NullInfinity/socman/master)
 [![license](https://img.shields.io/github/license/NullInfinity/socman.svg)](https://github.com/NullInfinity/socman/blob/master/LICENSE.txt)
