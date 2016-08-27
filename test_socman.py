@@ -36,7 +36,7 @@ from socman import Member, MemberDatabase, Name
 
 
 class NameTestCase(unittest.TestCase):
-    """Test cases for socman.Name"""
+    """Test cases for socman.Name."""
 
     def setUp(self):
         self.first_name = 'Ted'
@@ -194,63 +194,6 @@ class MemberDatabaseTestCase(unittest.TestCase):
         mdb = MemberDatabase('test.db', safe = False)
         mdb.optional_commit()
         self.assertFalse(self.mocksql_connect().commit.called)
-
-    def test_sql_build_name_value_pairs(self):
-        self.assertEqual((None,None), self.mdb.sql_build_name_value_pairs(Member(None), sep=' AND '))
-        self.assertEqual(('lastName=?', (self.last_name, )), self.mdb.sql_build_name_value_pairs(Member(self.barcode, Name(self.last_name)), sep=' AND '))
-        self.assertEqual(('firstName=? AND lastName=?', (self.first_name, self.last_name)), self.mdb.sql_build_name_value_pairs(Member(self.barcode, Name(self.first_name, self.last_name)), sep=' AND '))
-        self.assertEqual(('firstName=?,lastName=?', (self.first_name, self.last_name)), self.mdb.sql_build_name_value_pairs(Member(self.barcode, Name(self.first_name, self.last_name)), sep=','))
-
-    def test_sql_search_barcode_phrase(self):
-        self.assertEqual((None, None), self.mdb.sql_search_barcode_phrase(Member(None)))
-        self.assertEqual(('barcode=?', (self.barcode,)), self.mdb.sql_search_barcode_phrase(Member(self.barcode)))
-        self.assertEqual(('barcode=?', (self.barcode,)), self.mdb.sql_search_barcode_phrase(Member(self.barcode, Name(self.first_name, self.last_name))))
-
-    def test_sql_search_name_phrase(self):
-        self.assertEqual((None, None), self.mdb.sql_search_name_phrase(Member(None)))
-        self.assertEqual(('lastName=?', (self.last_name, )), self.mdb.sql_search_name_phrase(Member(None, Name(self.last_name))))
-        self.assertEqual(('firstName=? AND lastName=?', (self.first_name, self.last_name)), self.mdb.sql_search_name_phrase(Member(None, Name(self.first_name, self.last_name))))
-
-    def test_sql_search_phrase_barcode(self):
-        self.assertEqual(('barcode=?', (self.barcode,)), self.mdb.sql_search_phrase(Member(self.barcode)))
-        self.assertEqual(('barcode=?', (self.barcode,)), self.mdb.sql_search_phrase(Member(self.barcode, Name(self.first_name, self.last_name))))
-
-    def test_sql_search_phrase_nobarcode(self):
-        self.assertEqual((None, None), self.mdb.sql_search_phrase(Member(None)))
-        self.assertEqual(('lastName=?', (self.last_name, )), self.mdb.sql_search_phrase(Member(None, Name(self.last_name))))
-        self.assertEqual(('firstName=? AND lastName=?', (self.first_name, self.last_name)), self.mdb.sql_search_phrase(Member(None, Name(self.first_name, self.last_name))))
-
-    def test_sql_update_barcode_phrase(self):
-        self.assertEqual((None, None), self.mdb.sql_update_barcode_phrase(Member(None)))
-        self.assertEqual((None, None), self.mdb.sql_update_barcode_phrase(Member(None, Name(self.last_name))))
-        self.assertEqual(('barcode=?', (self.barcode, )), self.mdb.sql_update_barcode_phrase(Member(self.barcode)))
-        self.assertEqual(('barcode=?', (self.barcode, )), self.mdb.sql_update_barcode_phrase(Member(self.barcode, Name(self.first_name, self.last_name))))
-
-    def test_sql_update_name_phrase(self):
-        self.assertEqual((None, None), self.mdb.sql_update_name_phrase(Member(self.barcode)))
-        self.assertEqual(('lastName=?', (self.last_name, )), self.mdb.sql_update_name_phrase(Member(self.barcode, Name(self.last_name))))
-        self.assertEqual(('firstName=?,lastName=?', (self.first_name, self.last_name)), self.mdb.sql_update_name_phrase(Member(self.barcode, Name(self.first_name, self.last_name))))
-
-    def test_sql_search_query(self):
-        self.assertEqual((None, None), self.mdb.sql_search_query(Member(None)))
-        self.assertEqual(('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode, )), self.mdb.sql_search_query(Member(self.barcode)))
-
-    def test_sql_update_barcode_query(self):
-        self.assertEqual((None, None), self.mdb.sql_update_barcode_query(Member(None)))
-        self.assertEqual(('UPDATE users SET barcode=? WHERE firstName=? AND lastName=?', (self.barcode, self.first_name, self.last_name)), self.mdb.sql_update_barcode_query(Member(self.barcode, Name(self.first_name, self.last_name))))
-
-    def test_sql_update_name_query(self):
-        self.assertEqual((None, None), self.mdb.sql_update_name_query(Member(None)))
-        self.assertEqual((None, None), self.mdb.sql_update_name_query(Member(None)))
-        self.assertEqual(('UPDATE users SET firstName=?,lastName=? WHERE barcode=?', (self.first_name, self.last_name, self.barcode)), self.mdb.sql_update_name_query(Member(self.barcode, Name(self.first_name, self.last_name))))
-
-    @patch('socman.date')
-    def test_update_last_attended_query(self, mock_date):
-        mock_date.today.return_value = date.min
-
-        self.assertEqual((None, None), self.mdb.sql_update_last_attended_query(Member(None)))
-        self.assertEqual(('UPDATE users SET last_attended=? WHERE barcode=?', (date.min, self.barcode)), self.mdb.sql_update_last_attended_query(Member(self.barcode)))
-        self.assertEqual(('UPDATE users SET last_attended=? WHERE firstName=? AND lastName=?', (date.min, self.first_name, self.last_name)), self.mdb.sql_update_last_attended_query(Member(None, Name(self.first_name, self.last_name))))
 
     def test_get_member_no_barcode_no_name_update_timestamp(self):
 
