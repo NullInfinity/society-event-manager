@@ -12,4 +12,4 @@ install:
 build: off
 
 test_script:
-  - "%PYTHON\\python.exe test_socman.py"
+  - "%PYTHON%\\python.exe %APPVEYOR_BUILD_FOLDER%\\test_socman.py"
