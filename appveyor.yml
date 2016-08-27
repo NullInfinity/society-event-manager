@@ -1,0 +1,13 @@
+environment:
+
+  matrix:
+
+    - PYTHON: "C:\\Python33"
+    - PYTHON: "C:\\Python34"
+    - PYTHON: "C:\\Python35"
+
+    install:
+      - "%PYTHON%\\python.exe -m pip install coveralls"
+
+    test_script:
+      - "%PYTHON\\python.exe test_socman.py"
