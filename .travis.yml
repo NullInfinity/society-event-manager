@@ -9,14 +9,21 @@ python:
 
 os:
   - linux
-  - osx
 
+matrix:
+  include:
+    - os: osx
+      language: generic
+
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; brew install; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install python3; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then virtualenv env -p python3; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then source env/bin/activate; fi
 
 install:
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; brew install python3; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux"]]; pip install coveralls; fi
+  - pip install coveralls
 
-script: if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then coverage run --source=socman test_socman.py; fi
-        if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then python3 test_socman.py; fi
+script: coverage run --source=socman test_socman.py
 
 after_success: if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then coveralls; fi
