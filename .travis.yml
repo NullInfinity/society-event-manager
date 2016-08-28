@@ -10,10 +10,11 @@ python:
 os:
   - linux
 
+# single OSX test for now, using Python 3 from homebrew
 matrix:
   include:
     - os: osx
-      language: generic
+      python: none
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
