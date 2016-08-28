@@ -1,13 +1,22 @@
 language: python
+
 python:
   - "3.3"
   - "3.4"
   - "3.5"
   - "3.5-dev"
   - "nightly"
-install:
-  - pip install coveralls
+
 os:
   - linux
-script: coverage run --source=socman test_socman.py
-after_success: coveralls
+  - osx
+
+
+install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; brew install python3; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux"]]; pip install coveralls; fi
+
+script: if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then coverage run --source=socman test_socman.py; fi
+        if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then python3 test_socman.py; fi
+
+after_success: if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then coveralls; fi
