@@ -14,7 +14,7 @@ os:
 matrix:
   include:
     - os: osx
-      python: none
+      python:
 
 before_install:
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
