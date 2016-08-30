@@ -25,7 +25,9 @@ before_install:
 
 install:
   - pip install coveralls
+  - pip install pytest
+  - pip install pytest-cov
 
-script: coverage run --source=socman test_socman.py
+script: python -m pytest --cov=socman --cov-report= tests/
 
 after_success: if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then coveralls; fi
