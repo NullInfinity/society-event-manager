@@ -1,5 +1,5 @@
 """
-test_Name.py contains the automated tests for socman.Name.
+test_name.py contains the automated tests for socman.Name.
 
 Tests on socman should be run with `python -m pytest`. To run just these tests,
 run `pytest tests/test_Name.py`.
@@ -99,6 +99,10 @@ import socman
         })
 ])
 def test_name_strings(name, expected):
+    """Check each part of the Name is returned correctly.
+
+    The parts are: first, middle, last, given (first + middle) and full
+    """
     assert name.names == expected['names']
     assert name.first() == expected['first']
     assert name.middle() == expected['middle']
@@ -113,6 +117,7 @@ def test_name_strings(name, expected):
     socman.Name('Ted', None)
     ])
 def test_name_true(name):
+    """Test Name.__bool__ on True names."""
     assert name
 
 
@@ -125,6 +130,7 @@ def test_name_true(name):
     #socman.Name('', None)
     ])
 def test_falsiness(name):
+    """Test Name.__bool__ on False names."""
     assert not name
 
 
@@ -135,6 +141,7 @@ def test_falsiness(name):
     (socman.Name('Ted', None), socman.Name('Ted', None))
     ])
 def test_equality(name1, name2):
+    """Test Name equality operator."""
     assert name1 == name2
 
 
@@ -147,18 +154,19 @@ def test_equality(name1, name2):
     (socman.Name('Ted', 'Rogers'), 'test')
     ])
 def test_inequality(name1, name2):
+    """Test Name inequality operator."""
     assert name1 != name2
 
 
 def test_name_none():
-    """If a name contains only None names it should be the same as an
-    empty name."""
+    """Check Name with only None names is equal to empty name."""
     assert socman.Name() == socman.Name(None)
     assert socman.Name() == socman.Name(None, None)
 
 
 @pytest.mark.parametrize("sep", ['_', '.', 'sep', ' sep '])
 def test_custom_separator(sep):
+    """Check Name works with custom separator strings between parts of name."""
     name = socman.Name('Ted', 'Bobson', 'Rogers', sep=sep)
 
     assert name.given() == 'Ted' + sep + 'Bobson'
