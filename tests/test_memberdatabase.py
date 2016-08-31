@@ -36,6 +36,29 @@ import pytest
 import socman
 
 
+@unittest.mock.patch('socman.sqlite3.connect')
+def test_db_connect(mocksql_connect):
+    """Test MemberDatabase.__init__ calls sqlite3.connect."""
+    socman.MemberDatabase('test.db', safe=True)
+    mocksql_connect.assert_called_with('test.db')
+
+
+@unittest.mock.patch('socman.sqlite3.connect')
+def test_optional_commit_on(mocksql_connect):
+    """Test MemberDatabase.optional_commit commits to DB when safe=True."""
+    mdb = socman.MemberDatabase('test.db', safe=True)
+    mdb.optional_commit()
+    assert mocksql_connect().commit.called
+
+
+@unittest.mock.patch('socman.sqlite3.connect')
+def test_optional_commit_off(mocksql_connect):
+    """Test MemberDatabase.optional_commit does not commit to DB when safe=False."""
+    mdb = socman.MemberDatabase('test.db', safe=False)
+    mdb.optional_commit()
+    assert not mocksql_connect().commit.called
+
+
 class MemberDatabaseTestCase(unittest.TestCase):
     def setUp(self):
         self.first_name = 'Ted'
@@ -51,18 +74,6 @@ class MemberDatabaseTestCase(unittest.TestCase):
 
         self.mdb = socman.MemberDatabase('test.db', safe=True)
 
-    def test_db_connect(self):
-        self.mocksql_connect.assert_called_with('test.db')
-
-    def test_optional_commit_on(self):
-        mdb = socman.MemberDatabase('test.db', safe=True)
-        mdb.optional_commit()
-        self.assertTrue(self.mocksql_connect().commit.called)
-
-    def test_optional_commit_off(self):
-        mdb = socman.MemberDatabase('test.db', safe=False)
-        mdb.optional_commit()
-        self.assertFalse(self.mocksql_connect().commit.called)
 
     def test_get_member_no_barcode_no_name_update_timestamp(self):
         with self.assertRaises(socman.BadMemberError):
