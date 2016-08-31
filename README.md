@@ -15,6 +15,7 @@ existing code. Major targets for version 0.2 are:
 
 * [X] support OSX and Windows for automated testing
 * [ ] use py.test for testing
+* [ ] Add functional tests using a real database files
 * [ ] simplify logic in MemberDatabase
 * [ ] publish the library on PyPI
 
