@@ -30,4 +30,6 @@ install:
 
 script: python -m pytest --cov=socman --cov-report= tests/
 
-after_success: if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then coveralls; fi
+after_success:
+  - coveralls
+  - bash <(curl -s https://codecov.io/bash)
