@@ -11,10 +11,11 @@ which tracks members in a SQLite3 database.
 
 ### Planned Features
 At present the main goal is to stabilise current functionality and refactor
-existing code. Major targets for version 0.2 are:
+existing code. Major targets for the first release (v0.1) are:
 
 * [X] support OSX and Windows for automated testing
 * [ ] use py.test for testing
+* [ ] add functional tests using real database files
 * [ ] simplify logic in MemberDatabase
 * [ ] publish the library on PyPI
 
