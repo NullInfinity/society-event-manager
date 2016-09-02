@@ -36,14 +36,26 @@ import pytest
 import socman
 
 
-@unittest.mock.patch('socman.sqlite3.connect')
-def test_db_connect(mocksql_connect):
+@pytest.fixture
+def mocksql_connect():
+    """Fixture for mocked sqlite3.connect function."""
+    mocksql_connect_patcher = unittest.mock.patch('socman.sqlite3.connect')
+    yield mocksql_connect_patcher.start()
+    mocksql_connect_patcher.stop()
+
+
+@pytest.fixture
+def mdb(mocksql_connect):
+    mdb_fixture = socman.MemberDatabase('test.db', safe=True)
+    mdb_fixture.__mocksql_connect = mocksql_connect
+    yield mdb_fixture
+
+
+def test_db_connect(mdb):
     """Test MemberDatabase.__init__ calls sqlite3.connect."""
-    socman.MemberDatabase('test.db', safe=True)
-    mocksql_connect.assert_called_with('test.db')
+    mdb.__mocksql_connect.assert_called_with('test.db')
 
 
-@unittest.mock.patch('socman.sqlite3.connect')
 def test_optional_commit_on(mocksql_connect):
     """Test MemberDatabase.optional_commit commits to DB when safe=True."""
     mdb = socman.MemberDatabase('test.db', safe=True)
@@ -51,12 +63,148 @@ def test_optional_commit_on(mocksql_connect):
     assert mocksql_connect().commit.called
 
 
-@unittest.mock.patch('socman.sqlite3.connect')
 def test_optional_commit_off(mocksql_connect):
     """Test MemberDatabase.optional_commit does not commit to DB when safe=False."""
     mdb = socman.MemberDatabase('test.db', safe=False)
     mdb.optional_commit()
     assert not mocksql_connect().commit.called
+
+
+# exception=None means member is present and will be found
+# suffix on each comment description will contain either AF, TS, both or none
+#   AF = autofix enabled
+#   TS = update_timestamp enabled
+@pytest.mark.parametrize("args,return_values,exception,calls", [
+    (   # member with no name or barcode (so not present!)
+        {
+            'member': socman.Member(None, None),
+            'autofix': False,
+            'update_timestamp': False,
+            },
+        [
+            [],
+            [],
+            ],
+        socman.BadMemberError,
+        {
+            'values': [],
+            'count': {
+                'execute': 0,
+                'fetchall': 0,
+                'commit': 0
+                },
+            }
+        ),
+
+    (   # member with no name or barcode (so not present!) AF
+        {
+            'member': socman.Member(None, None),
+            'autofix': True,
+            'update_timestamp': False,
+            },
+        [
+            [],
+            [],
+            ],
+        socman.BadMemberError,
+        {
+            'values': [],
+            'count': {
+                'execute': 0,
+                'fetchall': 0,
+                'commit': 0
+                },
+            }
+        ),
+
+    (   # member with no name or barcode (so not present!) TS
+        {
+            'member': socman.Member(None, None),
+            'autofix': False,
+            'update_timestamp': True,
+            },
+        [
+            [],
+            [],
+            ],
+        socman.BadMemberError,
+        {
+            'values': [],
+            'count': {
+                'execute': 0,
+                'fetchall': 0,
+                'commit': 0
+                },
+            }
+        ),
+
+    (   # member with no name or barcode (so not present!) AFTS
+        {
+            'member': socman.Member(None, None),
+            'autofix': True,
+            'update_timestamp': True,
+            },
+        [
+            [],
+            [],
+            ],
+        socman.BadMemberError,
+        {
+            'values': [],
+            'count': {
+                'execute': 0,
+                'fetchall': 0,
+                'commit': 0
+                },
+            }
+        ),
+
+    (   # member not present in DB under barcode or name
+        {
+            'member': socman.Member('00000000',
+                                    name=socman.Name('Ted', 'Bobson'),
+                                    college='Wolfson'),
+            'autofix': False,
+            'update_timestamp': False,
+            },
+        [
+            [],
+            [],
+            ],
+        socman.MemberNotFoundError,
+        {
+            'values': [
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE barcode=?""",
+                    ('00000000',)
+                    ),
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE firstName=? AND lastName=?""",
+                    ('Ted', 'Bobson')
+                    ),
+                ],
+            'count': {
+                'execute': 2,
+                'fetchall': 2,
+                'commit': 0
+                },
+            }
+        ),
+    ])
+def test_get_member(mdb, args, return_values, exception, calls):
+    mdb.__mocksql_connect().cursor().fetchall.side_effect = return_values
+
+    if not exception:
+        assert True
+    else:
+        with pytest.raises(exception):
+            mdb.get_member(**args)
+    mdb.__mocksql_connect().cursor().execute.assert_has_calls(calls['values'])
+    assert calls['count']['execute'] == mdb.__mocksql_connect().cursor().execute.call_count
+    assert calls['count']['fetchall'] == mdb.__mocksql_connect().cursor().fetchall.call_count
+    assert calls['count']['commit'] == mdb.__mocksql_connect().commit.call_count
 
 
 class MemberDatabaseTestCase(unittest.TestCase):
@@ -74,35 +222,6 @@ class MemberDatabaseTestCase(unittest.TestCase):
 
         self.mdb = socman.MemberDatabase('test.db', safe=True)
 
-
-    def test_get_member_no_barcode_no_name_update_timestamp(self):
-        with self.assertRaises(socman.BadMemberError):
-            self.mdb.get_member(member=socman.Member(None))
-        self.assertFalse(self.mocksql_connect().cursor().execute.called)
-        self.assertFalse(self.mocksql_connect().cursor().fetchall.called)
-        self.assertFalse(self.mocksql_connect().commit.called)
-
-    def test_get_member_no_barcode_no_name(self):
-        with self.assertRaises(socman.BadMemberError):
-            self.mdb.get_member(member=socman.Member(None), update_timestamp=False)
-        self.assertFalse(self.mocksql_connect().cursor().execute.called)
-        self.assertFalse(self.mocksql_connect().cursor().fetchall.called)
-        self.assertFalse(self.mocksql_connect().commit.called)
-
-    def test_get_member_no_barcode_no_name_update_timestamp_autofix(self):
-        with self.assertRaises(socman.BadMemberError):
-            self.mdb.get_member(member=socman.Member(None), autofix=True)
-        self.assertFalse(self.mocksql_connect().cursor().execute.called)
-        self.assertFalse(self.mocksql_connect().cursor().fetchall.called)
-        self.assertFalse(self.mocksql_connect().commit.called)
-
-    def test_get_member_no_barcode_no_name_autofix(self):
-        with self.assertRaises(socman.BadMemberError):
-            self.mdb.get_member(member=socman.Member(None), update_timestamp=False, autofix=True)
-        self.assertFalse(self.mocksql_connect().cursor().execute.called)
-        self.assertFalse(self.mocksql_connect().cursor().fetchall.called)
-        self.assertFalse(self.mocksql_connect().commit.called)
-
     def test_get_member_barcode_not_present(self):
         self.mocksql_connect().cursor().fetchall.return_value = []
 
@@ -111,16 +230,6 @@ class MemberDatabaseTestCase(unittest.TestCase):
         self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode,))
         self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
         self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
-        self.assertFalse(self.mocksql_connect().commit.called)
-
-    def test_get_member_barcode_name_not_present(self):
-        self.mocksql_connect().cursor().fetchall.return_value = []
-
-        with self.assertRaises(socman.MemberNotFoundError):
-            self.mdb.get_member(member=self.member)
-        self.mocksql_connect().cursor().execute.assert_has_calls([unittest.mock.call('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode,)), unittest.mock.call('SELECT firstName,lastName FROM users WHERE firstName=? AND lastName=?', (self.first_name, self.last_name))])
-        self.assertEqual(2, self.mocksql_connect().cursor().execute.call_count)
-        self.assertEqual(2, self.mocksql_connect().cursor().fetchall.call_count)
         self.assertFalse(self.mocksql_connect().commit.called)
 
     def test_get_member_name_not_present(self):
