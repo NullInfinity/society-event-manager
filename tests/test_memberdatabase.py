@@ -1,5 +1,5 @@
 """
-test_MemberDatabase.py contains the automated tests for socman.MemberDatabase.
+test_memberdatabase.py contains the automated tests for socman.MemberDatabase.
 
 Tests on socman should be run with `python -m pytest`. To run just these tests,
 run `pytest tests/test_MemberDatabase.py`.
