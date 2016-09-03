@@ -27,7 +27,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
-
+# pylint: disable=redefined-outer-name
 import collections
 import datetime
 import unittest
@@ -54,7 +54,7 @@ def mocks():
     # they are simply created so the values of date.min and datetime.utcnow
     # can be controlled
     yield collections.namedtuple('mock_type', 'sql_connect date datetime')(
-            sql_connect_patcher.start(), date_mock, datetime_mock)
+        sql_connect_patcher.start(), date_mock, datetime_mock)
 
     sql_connect_patcher.stop()
     datetime_patcher.stop()
@@ -112,9 +112,9 @@ def test_get_member_bad_member(mdb, member, autofix, update_timestamp):
     with pytest.raises(socman.BadMemberError):
         mdb.get_member(member=member,
                        autofix=autofix, update_timestamp=update_timestamp)
-    assert 0 == mdb.mocksql_connect().cursor().execute.call_count
-    assert 0 == mdb.mocksql_connect().cursor().fetchall.call_count
-    assert 0 == mdb.mocksql_connect().commit.call_count
+    assert mdb.mocksql_connect().cursor().execute.call_count == 0
+    assert mdb.mocksql_connect().cursor().fetchall.call_count == 0
+    assert mdb.mocksql_connect().commit.call_count == 0
 
 
 @pytest.mark.parametrize("member,calls", [
@@ -144,11 +144,11 @@ def test_get_member_bad_member(mdb, member, autofix, update_timestamp):
             }
         ),
 
-     (   # member with barcode only
-         # not present in DB
-         socman.Member(barcode='00000000',
-                       name=None,
-                       college='Wolfson'),
+    (   # member with barcode only
+        # not present in DB
+        socman.Member(barcode='00000000',
+                      name=None,
+                      college='Wolfson'),
         {
             'values': [
                 unittest.mock.call(
@@ -196,7 +196,7 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
         mdb.get_member(member=member,
                        autofix=autofix, update_timestamp=update_timestamp)
 
-    mdb.mocksql_connect().cursor().execute.assert_has_calls(calls['values'])
+        mdb.mocksql_connect().cursor().execute.assert_has_calls(calls['values'])
     assert (calls['count']['execute'] ==
             mdb.mocksql_connect().cursor().execute.call_count)
     assert (calls['count']['fetchall'] ==
@@ -736,13 +736,14 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
                 },
             }
         ),
-     ])
+    ])
 def test_get_member(mdb, args, mock_returns, calls):
     """Test get_member with a member object present in the database.
 
     Tests with various values of `autofix` and `update_timestamp`.
     Tests various possibilities, e.g. member with barcode, name or both, and
-    whether member is found in database under barcode or name."""
+    whether member is found in database under barcode or name.
+    """
     mdb.mocksql_connect().cursor().fetchall.side_effect = mock_returns
 
     assert ('Ted', 'Bobson') == mdb.get_member(**args)
@@ -757,10 +758,10 @@ def test_get_member(mdb, args, mock_returns, calls):
 
 
 @pytest.mark.parametrize("member", [
-        # None passed as member
-        None,
-        # None member
-        socman.Member(None),
+    # None passed as member
+    None,
+    # None member
+    socman.Member(None),
     ])
 def test_add_member_none_member(mdb, member):
     """Test add member with a bad (i.e. None) member object."""
@@ -769,7 +770,7 @@ def test_add_member_none_member(mdb, member):
     with pytest.raises(socman.BadMemberError):
         mdb.add_member(member)
 
-    assert 0 == mdb.mocksql_connect().cursor().execute.call_count
+    assert mdb.mocksql_connect().cursor().execute.call_count == 0
 
 
 @pytest.mark.parametrize("member,mock_returns,execute_call_count", [
@@ -781,7 +782,7 @@ def test_add_member_none_member(mdb, member):
         [
             [('Ted', 'Bobson')],
             ],
-            3,  # 1 for barcode lookup, 2 for autofix and update_timestamp
+        3,  # 1 for barcode lookup, 2 for autofix and update_timestamp
         ),
     (   # member with name and barcode
         # already present under name
@@ -792,8 +793,8 @@ def test_add_member_none_member(mdb, member):
             [],
             [('Ted', 'Bobson')],
             ],
-            4,  # 2 for barcode then name lookup
-                # 2 for autofix and update_timestamp
+        4,  # 2 for barcode then name lookup
+            # 2 for autofix and update_timestamp
         ),
     ])
 def test_add_member_already_present(mdb, member, mock_returns,
@@ -812,8 +813,7 @@ def test_add_member_already_present(mdb, member, mock_returns,
             mdb.mocksql_connect().cursor().execute.call_count)
 
 
-@pytest.mark.parametrize(
-    "member,mock_returns,execute_call,execute_call_count", [
+@pytest.mark.parametrize("member,mock_returns,execute_call,execute_call_count", [
     (   # member with name and barcode
         socman.Member(barcode='00000000',
                       name=socman.Name('Ted', 'Bobson'),
@@ -830,8 +830,8 @@ def test_add_member_already_present(mdb, member, mock_returns,
              datetime.date.min, datetime.datetime.min,
              datetime.datetime.min, datetime.date.min)
             ),
-            3  # 2 lookups (name and barcode) + 1 update query
-            ),
+        3  # 2 lookups (name and barcode) + 1 update query
+        ),
     ])
 def test_add_member_not_yet_present(mdb, member, mock_returns,
                                     execute_call, execute_call_count):
