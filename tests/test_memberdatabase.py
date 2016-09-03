@@ -848,46 +848,77 @@ def test_get_member(mdb, args, mock_returns, expected_return, exception, calls):
     assert calls['count']['commit'] == mdb._mocksql_connect().commit.call_count
 
 
-class MemberDatabaseTestCase(unittest.TestCase):
-    def setUp(self):
-        self.first_name = 'Ted'
-        self.last_name = 'Bobson'
-        self.barcode = '00000000'
-        self.college = 'Wolfson'
-        self.member = socman.Member(self.barcode, socman.Name(self.first_name, self.last_name), college = self.college)
-        self.member_nobarcode = socman.Member(None, socman.Name(self.first_name, self.last_name), college = self.college)
+@pytest.mark.parametrize("member", [
+        # None passed as member
+        None,
+        # None member
+        socman.Member(None),
+    ])
+def test_add_member_none_member(mdb, member):
+    mdb._mocksql_connect().cursor().fetchall.side_effect = []
 
-        self.mocksql_connect_patcher = unittest.mock.patch('socman.sqlite3.connect')
-        self.mocksql_connect = self.mocksql_connect_patcher.start()
-        self.addCleanup(self.mocksql_connect_patcher.stop)
+    with pytest.raises(socman.BadMemberError):
+        mdb.add_member(member)
 
-        self.mdb = socman.MemberDatabase('test.db', safe=True)
+    assert 0 == mdb._mocksql_connect().cursor().execute.call_count
 
 
-    def test_add_member_none(self):
-        with self.assertRaises(socman.BadMemberError):
-            self.mdb.add_member(member=socman.Member(None))
+@pytest.mark.parametrize("member,mock_returns,execute_call_count", [
+    (   # member with name and barcode
+        # already present under barcode
+        socman.Member(barcode='00000000',
+                      name=socman.Name('Ted', 'Bobson'),
+                      college='Wolfson'),
+        [
+            [('Ted', 'Bobson')],
+            ],
+            3,  # 1 for barcode lookup, 2 for autofix and update_timestamp
+        ),
+    (   # member with name and barcode
+        # already present under name
+        socman.Member(barcode='00000000',
+                      name=socman.Name('Ted', 'Bobson'),
+                      college='Wolfson'),
+        [
+            [],
+            [('Ted', 'Bobson')],
+            ],
+            4,  # 2 for barcode then name lookup
+                # 2 for autofix and update_timestamp
+        ),
+    ])
+def test_add_member_already_present(mdb, member, mock_returns, execute_call_count):
+    mdb._mocksql_connect().cursor().fetchall.side_effect = mock_returns
 
-    def test_add_member_present(self):
-        self.mocksql_connect().cursor().fetchall.return_value = [(self.first_name, self.last_name)]
-        self.mdb.add_member(self.member)
-        self.assertEqual(3, self.mocksql_connect().cursor().execute.call_count)
+    mdb.add_member(member)
 
-    def test_add_member_present_by_name(self):
-        self.mocksql_connect().cursor().fetchall.side_effect = [[], (self.first_name, self.last_name)]
-        self.mdb.add_member(self.member)
-        self.assertEqual(4, self.mocksql_connect().cursor().execute.call_count)
+    assert execute_call_count == mdb._mocksql_connect().cursor().execute.call_count
 
-    @unittest.mock.patch('socman.datetime')
-    @unittest.mock.patch('socman.date')
-    def test_add_member_new(self, mock_date, mock_datetime):
-        self.mocksql_connect().cursor().fetchall.side_effect = [[], [], [(self.first_name, self.last_name)]]
-        mock_date.today.return_value = datetime.date.min
-        mock_datetime.utcnow.return_value = datetime.datetime.min
 
-        self.mdb.add_member(self.member)
-        self.mocksql_connect().cursor().execute.assert_called_with('INSERT INTO users (barcode, firstName, lastName, college, datejoined, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)', (self.barcode, self.first_name, self.last_name, self.college, datetime.date.min, datetime.datetime.min, datetime.datetime.min))
-        self.assertEqual(3, self.mocksql_connect().cursor().execute.call_count)
+@pytest.mark.parametrize("member,mock_returns,execute_call,execute_call_count", [
+    (   # member with name and barcode
+        socman.Member(barcode='00000000',
+                      name=socman.Name('Ted', 'Bobson'),
+                      college='Wolfson'),
+        [
+            [],
+            [],
+            ],
+        (
+            """INSERT INTO users (barcode, firstName, lastName, """
+            """college, datejoined, created_at, updated_at, last_attended) """
+            """VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            ('00000000', 'Ted', 'Bobson', 'Wolfson',
+             datetime.date.min, datetime.datetime.min,
+             datetime.datetime.min, datetime.date.min)
+            ),
+            3  # 2 lookups (name and barcode) + 1 update query
+            ),
+    ])
+def test_add_member_not_yet_present(mdb, member, mock_returns, execute_call, execute_call_count):
+    mdb._mocksql_connect().cursor().fetchall.side_effect = mock_returns
 
-if __name__ == '__main__':
-    unittest.main()
+    mdb.add_member(member)
+
+    mdb._mocksql_connect().cursor().execute.assert_called_with(*execute_call)
+    assert execute_call_count == mdb._mocksql_connect().cursor().execute.call_count
