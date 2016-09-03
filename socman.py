@@ -303,7 +303,7 @@ class MemberDatabase:
         # TODO implement deduping and better handling of duplicate records
         cursor = self.__connection.cursor()
 
-        if not member or not member.barcode and not member.name:
+        if not member or (not member.barcode and not member.name):
             raise BadMemberError(member)
 
         # first try to find member by barcode, if available
@@ -352,18 +352,22 @@ class MemberDatabase:
         if autofix and member.barcode:
             af_query, af_values = self.__sql_update_barcode_query(member)
             cursor.execute(af_query, af_values)
-            self.optional_commit()
+
+        self.optional_commit()
 
         # TODO dedupe if necessary
         return users[0]
 
     def __sql_add_query(self, member):
-        return (('INSERT INTO users (barcode, firstName, '
-                 'lastName, college, datejoined, created_at, updated_at) '
-                 'VALUES (?, ?, ?, ?, ?, ?, ?)'),
+        return (
+                """INSERT INTO users (barcode, firstName, """
+                """lastName, college, """
+                """datejoined, created_at, updated_at, last_attended) """
+                """VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                 (member.barcode, member.name.first(), member.name.last(),
                  member.college, date.today(), datetime.utcnow(),
-                 datetime.utcnow()))
+                 datetime.utcnow(), date.today())
+            )
 
     def add_member(self, member):
         """Add a member to the database.

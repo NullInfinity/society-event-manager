@@ -11,5 +11,8 @@ environment:
 
 build: off
 
+install:
+  - "%PYTHON%\\python.exe -m pip install pytest"
+
 test_script:
-  - "%PYTHON%\\python.exe %APPVEYOR_BUILD_FOLDER%\\test_socman.py"
+  - "%PYTHON%\\python.exe -m pytest -q %APPVEYOR_BUILD_FOLDER%\\tests\\"
