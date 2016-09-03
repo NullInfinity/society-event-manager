@@ -87,113 +87,29 @@ def test_optional_commit_off(mocks):
     assert not mocks.sql_connect().commit.called
 
 
-# exception=None means member is present and will be found
-# suffix on each comment description will contain either AF, TS, both or none
-#   AF = autofix enabled
-#   TS = update_timestamp enabled
-@pytest.mark.parametrize("args,mock_returns,expected_return,exception,calls", [
-    (   # member with no name or barcode (so not present!)
-        {
-            'member': socman.Member(None, None),
-            'autofix': False,
-            'update_timestamp': False,
-            },
-        [
-            [],
-            [],
-            ],
-        None,
-        socman.BadMemberError,
-        {
-            'values': [],
-            'count': {
-                'execute': 0,
-                'fetchall': 0,
-                'commit': 0
-                },
-            }
-        ),
+@pytest.mark.parametrize("member", [
+    None,
+    socman.Member(None),
+    socman.Member(None, name=None, college=None)
+    ])
+@pytest.mark.parametrize("autofix", [True, False])
+@pytest.mark.parametrize("update_timestamp", [True, False])
+def test_get_member_bad_member(mdb, member, autofix, update_timestamp):
+    mdb._mocksql_connect().cursor().fetchall.side_effect = [[], []]
 
-    (   # member with no name or barcode (so not present!) AF
-        {
-            'member': socman.Member(None, None),
-            'autofix': True,
-            'update_timestamp': False,
-            },
-        [
-            [],
-            [],
-            ],
-        None,
-        socman.BadMemberError,
-        {
-            'values': [],
-            'count': {
-                'execute': 0,
-                'fetchall': 0,
-                'commit': 0
-                },
-            }
-        ),
+    with pytest.raises(socman.BadMemberError):
+        mdb.get_member(member=member, autofix=autofix, update_timestamp=update_timestamp)
+    assert 0 == mdb._mocksql_connect().cursor().execute.call_count
+    assert 0 == mdb._mocksql_connect().cursor().fetchall.call_count
+    assert 0 == mdb._mocksql_connect().commit.call_count
 
-    (   # member with no name or barcode (so not present!) TS
-        {
-            'member': socman.Member(None, None),
-            'autofix': False,
-            'update_timestamp': True,
-            },
-        [
-            [],
-            [],
-            ],
-        None,
-        socman.BadMemberError,
-        {
-            'values': [],
-            'count': {
-                'execute': 0,
-                'fetchall': 0,
-                'commit': 0
-                },
-            }
-        ),
 
-    (   # member with no name or barcode (so not present!) AFTS
-        {
-            'member': socman.Member(None, None),
-            'autofix': True,
-            'update_timestamp': True,
-            },
-        [
-            [],
-            [],
-            ],
-        None,
-        socman.BadMemberError,
-        {
-            'values': [],
-            'count': {
-                'execute': 0,
-                'fetchall': 0,
-                'commit': 0
-                },
-            }
-        ),
-
-    (   # member not present in DB under barcode or name
-        {
-            'member': socman.Member('00000000',
-                                    name=socman.Name('Ted', 'Bobson'),
-                                    college='Wolfson'),
-            'autofix': False,
-            'update_timestamp': False,
-            },
-        [
-            [],
-            [],
-            ],
-        None,
-        socman.MemberNotFoundError,
+@pytest.mark.parametrize("member,calls", [
+    (   # member with name and barcode
+        # not present in DB under barcode or name
+        socman.Member(barcode='00000000',
+                      name=socman.Name('Ted', 'Bobson'),
+                      college='Wolfson'),
         {
             'values': [
                 unittest.mock.call(
@@ -215,19 +131,11 @@ def test_optional_commit_off(mocks):
             }
         ),
 
-     (   # member not present in DB under barcode
-        {
-            'member': socman.Member('00000000',
-                                    college='Wolfson'),
-            'autofix': False,
-            'update_timestamp': False,
-            },
-        [
-            [],
-            [],
-            ],
-        None,
-        socman.MemberNotFoundError,
+     (   # member with barcode only
+         # not present in DB
+         socman.Member(barcode='00000000',
+                       name=None,
+                       college='Wolfson'),
         {
             'values': [
                 unittest.mock.call(
@@ -244,20 +152,11 @@ def test_optional_commit_off(mocks):
             }
         ),
 
-    (   # member not present in DB under name
-        {
-            'member': socman.Member(barcode=None,
-                                    name=socman.Name('Ted', 'Bobson'),
-                                    college='Wolfson'),
-            'autofix': False,
-            'update_timestamp': False,
-            },
-        [
-            [],
-            [],
-            ],
-        None,
-        socman.MemberNotFoundError,
+    (   # member with name only
+        # not present in DB
+        socman.Member(barcode=None,
+                      name=socman.Name('Ted', 'Bobson'),
+                      college='Wolfson'),
         {
             'values': [
                 unittest.mock.call(
@@ -273,7 +172,27 @@ def test_optional_commit_off(mocks):
                 },
             }
         ),
+    ])
+@pytest.mark.parametrize("autofix", [True, False])
+@pytest.mark.parametrize("update_timestamp", [True, False])
+def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
+    """Test get_member against non None Members which are not present in DB."""
+    mdb._mocksql_connect().cursor().fetchall.side_effect = [[], []]
 
+    with pytest.raises(socman.MemberNotFoundError):
+        mdb.get_member(member=member,
+                       autofix=autofix, update_timestamp=update_timestamp)
+
+    mdb._mocksql_connect().cursor().execute.assert_has_calls(calls['values'])
+    assert calls['count']['execute'] == mdb._mocksql_connect().cursor().execute.call_count
+    assert calls['count']['fetchall'] == mdb._mocksql_connect().cursor().fetchall.call_count
+    assert calls['count']['commit'] == mdb._mocksql_connect().commit.call_count
+
+
+# suffix on each comment description will contain either AF, TS, both or none
+#   AF = autofix enabled
+#   TS = update_timestamp enabled
+@pytest.mark.parametrize("args,mock_returns,calls", [
     (   # member with barcode only
         # present (and unique) in DB under barcode
         {
@@ -285,8 +204,6 @@ def test_optional_commit_off(mocks):
         [
             [('Ted', 'Bobson')],
             ],
-        ('Ted', 'Bobson'),
-        None,
         {
             'values': [
                 unittest.mock.call(
@@ -314,8 +231,6 @@ def test_optional_commit_off(mocks):
         [
             [('Ted', 'Bobson')],
             ],
-        ('Ted', 'Bobson'),
-        None,
         {
             'values': [
                 unittest.mock.call(
@@ -348,8 +263,6 @@ def test_optional_commit_off(mocks):
         [
             [('Ted', 'Bobson')],
             ],
-        ('Ted', 'Bobson'),
-        None,
         {
             'values': [
                 unittest.mock.call(
@@ -377,8 +290,6 @@ def test_optional_commit_off(mocks):
         [
             [('Ted', 'Bobson')],
             ],
-        ('Ted', 'Bobson'),
-        None,
         {
             'values': [
                 unittest.mock.call(
@@ -412,8 +323,6 @@ def test_optional_commit_off(mocks):
         [
             [('Ted', 'Bobson')],
             ],
-        ('Ted', 'Bobson'),
-        None,
         {
             'values': [
                 unittest.mock.call(
@@ -442,8 +351,6 @@ def test_optional_commit_off(mocks):
         [
             [('Ted', 'Bobson')],
             ],
-        ('Ted', 'Bobson'),
-        None,
         {
             'values': [
                 unittest.mock.call(
@@ -477,8 +384,6 @@ def test_optional_commit_off(mocks):
         [
             [('Ted', 'Bobson')],
             ],
-        ('Ted', 'Bobson'),
-        None,
         {
             'values': [
                 unittest.mock.call(
@@ -512,8 +417,6 @@ def test_optional_commit_off(mocks):
         [
             [('Ted', 'Bobson')],
             ],
-        ('Ted', 'Bobson'),
-        None,
         {
             'values': [
                 unittest.mock.call(
@@ -552,8 +455,6 @@ def test_optional_commit_off(mocks):
         [
             [('Ted', 'Bobson')],
             ],
-        ('Ted', 'Bobson'),
-        None,
         {
             'values': [
                 unittest.mock.call(
@@ -582,8 +483,6 @@ def test_optional_commit_off(mocks):
         [
             [('Ted', 'Bobson')],
             ],
-        ('Ted', 'Bobson'),
-        None,
         {
             'values': [
                 unittest.mock.call(
@@ -612,8 +511,6 @@ def test_optional_commit_off(mocks):
         [
             [('Ted', 'Bobson')],
             ],
-        ('Ted', 'Bobson'),
-        None,
         {
             'values': [
                 unittest.mock.call(
@@ -647,8 +544,6 @@ def test_optional_commit_off(mocks):
         [
             [('Ted', 'Bobson')],
             ],
-        ('Ted', 'Bobson'),
-        None,
         {
             'values': [
                 unittest.mock.call(
@@ -683,8 +578,6 @@ def test_optional_commit_off(mocks):
             [],
             [('Ted', 'Bobson')],
             ],
-        ('Ted', 'Bobson'),
-        None,
         {
             'values': [
                 unittest.mock.call(
@@ -719,8 +612,6 @@ def test_optional_commit_off(mocks):
             [],
             [('Ted', 'Bobson')],
             ],
-        ('Ted', 'Bobson'),
-        None,
         {
             'values': [
                 unittest.mock.call(
@@ -760,8 +651,6 @@ def test_optional_commit_off(mocks):
             [],
             [('Ted', 'Bobson')],
             ],
-        ('Ted', 'Bobson'),
-        None,
         {
             'values': [
                 unittest.mock.call(
@@ -801,8 +690,6 @@ def test_optional_commit_off(mocks):
             [],
             [('Ted', 'Bobson')],
             ],
-        ('Ted', 'Bobson'),
-        None,
         {
             'values': [
                 unittest.mock.call(
@@ -834,14 +721,11 @@ def test_optional_commit_off(mocks):
             }
         ),
      ])
-def test_get_member(mdb, args, mock_returns, expected_return, exception, calls):
+def test_get_member(mdb, args, mock_returns, calls):
     mdb._mocksql_connect().cursor().fetchall.side_effect = mock_returns
 
-    if not exception:
-        assert expected_return == mdb.get_member(**args)
-    else:
-        with pytest.raises(exception):
-            mdb.get_member(**args)
+    assert ('Ted', 'Bobson') == mdb.get_member(**args)
+
     mdb._mocksql_connect().cursor().execute.assert_has_calls(calls['values'])
     assert calls['count']['execute'] == mdb._mocksql_connect().cursor().execute.call_count
     assert calls['count']['fetchall'] == mdb._mocksql_connect().cursor().fetchall.call_count
