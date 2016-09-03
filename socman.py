@@ -359,12 +359,15 @@ class MemberDatabase:
         return users[0]
 
     def __sql_add_query(self, member):
-        return (('INSERT INTO users (barcode, firstName, '
-                 'lastName, college, datejoined, created_at, updated_at) '
-                 'VALUES (?, ?, ?, ?, ?, ?, ?)'),
+        return (
+                """INSERT INTO users (barcode, firstName, """
+                """lastName, college, """
+                """datejoined, created_at, updated_at, last_attended) """
+                """VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                 (member.barcode, member.name.first(), member.name.last(),
                  member.college, date.today(), datetime.utcnow(),
-                 datetime.utcnow()))
+                 datetime.utcnow(), date.today())
+            )
 
     def add_member(self, member):
         """Add a member to the database.
