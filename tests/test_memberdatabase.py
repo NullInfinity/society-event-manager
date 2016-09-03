@@ -39,7 +39,7 @@ import socman
 
 @pytest.fixture
 def mocks():
-    """Fixture for mocked sqlite3.connect and datetime functions."""
+    """Return fixture for mocked sqlite3.connect and datetime functions."""
     sql_connect_patcher = unittest.mock.patch('socman.sqlite3.connect')
 
     date_patcher = unittest.mock.patch('socman.date')
@@ -63,25 +63,34 @@ def mocks():
 
 @pytest.fixture
 def mdb(mocks):
+    """Return fixture for MemberDatabase, with mocks included.
+
+    Returns MemberDatabase object, with added reference to mocked
+    sqlite3.connect, mdb.mocksql_connect."""
+
     mdb_fixture = socman.MemberDatabase('test.db', safe=True)
-    mdb_fixture._mocksql_connect = mocks.sql_connect
+    mdb_fixture.mocksql_connect = mocks.sql_connect
     yield mdb_fixture
 
 
 def test_db_connect(mdb):
     """Test MemberDatabase.__init__ calls sqlite3.connect."""
-    mdb._mocksql_connect.assert_called_with('test.db')
+    mdb.mocksql_connect.assert_called_with('test.db')
 
 
 def test_optional_commit_on(mocks):
-    """Test MemberDatabase.optional_commit commits to DB when safe=True."""
+    """Test MemberDatabase.optional_commit commits when safe=True.
+
+    Checks that sqlite3.connect().cursor().commit() is called."""
     mdb = socman.MemberDatabase('test.db', safe=True)
     mdb.optional_commit()
     assert mocks.sql_connect().commit.called
 
 
 def test_optional_commit_off(mocks):
-    """Test MemberDatabase.optional_commit does not commit to DB when safe=False."""
+    """Test MemberDatabase.optional_commit does not commit when safe=False.
+
+    Checks that sqlite3.connect().cursor().commit() is not called."""
     mdb = socman.MemberDatabase('test.db', safe=False)
     mdb.optional_commit()
     assert not mocks.sql_connect().commit.called
@@ -95,13 +104,14 @@ def test_optional_commit_off(mocks):
 @pytest.mark.parametrize("autofix", [True, False])
 @pytest.mark.parametrize("update_timestamp", [True, False])
 def test_get_member_bad_member(mdb, member, autofix, update_timestamp):
-    mdb._mocksql_connect().cursor().fetchall.side_effect = [[], []]
+    """Test get_member when given a bad (i.e. None) member object."""
+    mdb.mocksql_connect().cursor().fetchall.side_effect = [[], []]
 
     with pytest.raises(socman.BadMemberError):
         mdb.get_member(member=member, autofix=autofix, update_timestamp=update_timestamp)
-    assert 0 == mdb._mocksql_connect().cursor().execute.call_count
-    assert 0 == mdb._mocksql_connect().cursor().fetchall.call_count
-    assert 0 == mdb._mocksql_connect().commit.call_count
+    assert 0 == mdb.mocksql_connect().cursor().execute.call_count
+    assert 0 == mdb.mocksql_connect().cursor().fetchall.call_count
+    assert 0 == mdb.mocksql_connect().commit.call_count
 
 
 @pytest.mark.parametrize("member,calls", [
@@ -177,16 +187,16 @@ def test_get_member_bad_member(mdb, member, autofix, update_timestamp):
 @pytest.mark.parametrize("update_timestamp", [True, False])
 def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
     """Test get_member against non None Members which are not present in DB."""
-    mdb._mocksql_connect().cursor().fetchall.side_effect = [[], []]
+    mdb.mocksql_connect().cursor().fetchall.side_effect = [[], []]
 
     with pytest.raises(socman.MemberNotFoundError):
         mdb.get_member(member=member,
                        autofix=autofix, update_timestamp=update_timestamp)
 
-    mdb._mocksql_connect().cursor().execute.assert_has_calls(calls['values'])
-    assert calls['count']['execute'] == mdb._mocksql_connect().cursor().execute.call_count
-    assert calls['count']['fetchall'] == mdb._mocksql_connect().cursor().fetchall.call_count
-    assert calls['count']['commit'] == mdb._mocksql_connect().commit.call_count
+    mdb.mocksql_connect().cursor().execute.assert_has_calls(calls['values'])
+    assert calls['count']['execute'] == mdb.mocksql_connect().cursor().execute.call_count
+    assert calls['count']['fetchall'] == mdb.mocksql_connect().cursor().fetchall.call_count
+    assert calls['count']['commit'] == mdb.mocksql_connect().commit.call_count
 
 
 # suffix on each comment description will contain either AF, TS, both or none
@@ -722,14 +732,19 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
         ),
      ])
 def test_get_member(mdb, args, mock_returns, calls):
-    mdb._mocksql_connect().cursor().fetchall.side_effect = mock_returns
+    """Test get_member with a member object present in the database.
+
+    Tests with various values of `autofix` and `update_timestamp`.
+    Tests various possibilities, e.g. member with barcode, name or both, and
+    whether member is found in database under barcode or name."""
+    mdb.mocksql_connect().cursor().fetchall.side_effect = mock_returns
 
     assert ('Ted', 'Bobson') == mdb.get_member(**args)
 
-    mdb._mocksql_connect().cursor().execute.assert_has_calls(calls['values'])
-    assert calls['count']['execute'] == mdb._mocksql_connect().cursor().execute.call_count
-    assert calls['count']['fetchall'] == mdb._mocksql_connect().cursor().fetchall.call_count
-    assert calls['count']['commit'] == mdb._mocksql_connect().commit.call_count
+    mdb.mocksql_connect().cursor().execute.assert_has_calls(calls['values'])
+    assert calls['count']['execute'] == mdb.mocksql_connect().cursor().execute.call_count
+    assert calls['count']['fetchall'] == mdb.mocksql_connect().cursor().fetchall.call_count
+    assert calls['count']['commit'] == mdb.mocksql_connect().commit.call_count
 
 
 @pytest.mark.parametrize("member", [
@@ -739,12 +754,13 @@ def test_get_member(mdb, args, mock_returns, calls):
         socman.Member(None),
     ])
 def test_add_member_none_member(mdb, member):
-    mdb._mocksql_connect().cursor().fetchall.side_effect = []
+    """Test add member with a bad (i.e. None) member object."""
+    mdb.mocksql_connect().cursor().fetchall.side_effect = []
 
     with pytest.raises(socman.BadMemberError):
         mdb.add_member(member)
 
-    assert 0 == mdb._mocksql_connect().cursor().execute.call_count
+    assert 0 == mdb.mocksql_connect().cursor().execute.call_count
 
 
 @pytest.mark.parametrize("member,mock_returns,execute_call_count", [
@@ -772,11 +788,16 @@ def test_add_member_none_member(mdb, member):
         ),
     ])
 def test_add_member_already_present(mdb, member, mock_returns, execute_call_count):
-    mdb._mocksql_connect().cursor().fetchall.side_effect = mock_returns
+    """Test add_member with a member already present in the database.
+
+    In this case, no actual UPDATE operation is expected on the database, but
+    during the lookup, the timestamp should be updated and the database entry
+    autofixed."""
+    mdb.mocksql_connect().cursor().fetchall.side_effect = mock_returns
 
     mdb.add_member(member)
 
-    assert execute_call_count == mdb._mocksql_connect().cursor().execute.call_count
+    assert execute_call_count == mdb.mocksql_connect().cursor().execute.call_count
 
 
 @pytest.mark.parametrize("member,mock_returns,execute_call,execute_call_count", [
@@ -800,9 +821,12 @@ def test_add_member_already_present(mdb, member, mock_returns, execute_call_coun
             ),
     ])
 def test_add_member_not_yet_present(mdb, member, mock_returns, execute_call, execute_call_count):
-    mdb._mocksql_connect().cursor().fetchall.side_effect = mock_returns
+    """Test add_member with a member not yet present in the database.
+
+    This is the case where the actual UPDATE operation should be performed."""
+    mdb.mocksql_connect().cursor().fetchall.side_effect = mock_returns
 
     mdb.add_member(member)
 
-    mdb._mocksql_connect().cursor().execute.assert_called_with(*execute_call)
-    assert execute_call_count == mdb._mocksql_connect().cursor().execute.call_count
+    mdb.mocksql_connect().cursor().execute.assert_called_with(*execute_call)
+    assert execute_call_count == mdb.mocksql_connect().cursor().execute.call_count
