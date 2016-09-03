@@ -28,6 +28,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
+import collections
 import datetime
 import unittest
 import unittest.mock
@@ -37,44 +38,60 @@ import socman
 
 
 @pytest.fixture
-def mocksql_connect():
-    """Fixture for mocked sqlite3.connect function."""
-    mocksql_connect_patcher = unittest.mock.patch('socman.sqlite3.connect')
-    yield mocksql_connect_patcher.start()
-    mocksql_connect_patcher.stop()
+def mocks():
+    """Fixture for mocked sqlite3.connect and datetime functions."""
+    sql_connect_patcher = unittest.mock.patch('socman.sqlite3.connect')
+
+    date_patcher = unittest.mock.patch('socman.date')
+    date_mock = date_patcher.start()
+    date_mock.today.return_value = datetime.date.min
+
+    datetime_patcher = unittest.mock.patch('socman.datetime')
+    datetime_mock = datetime_patcher.start()
+    datetime_mock.utcnow.return_value = datetime.datetime.min
+
+    # note that date and datetime mocks are never used
+    # they are simply created so the values of date.min and datetime.utcnow
+    # can be controlled
+    yield collections.namedtuple('mock_type', 'sql_connect date datetime')(
+            sql_connect_patcher.start(), date_mock, datetime_mock)
+
+    sql_connect_patcher.stop()
+    datetime_patcher.stop()
+    date_patcher.stop()
 
 
 @pytest.fixture
-def mdb(mocksql_connect):
+def mdb(mocks):
     mdb_fixture = socman.MemberDatabase('test.db', safe=True)
-    mdb_fixture.__mocksql_connect = mocksql_connect
+    mdb_fixture._mocksql_connect = mocks.sql_connect
     yield mdb_fixture
 
 
 def test_db_connect(mdb):
     """Test MemberDatabase.__init__ calls sqlite3.connect."""
-    mdb.__mocksql_connect.assert_called_with('test.db')
+    mdb._mocksql_connect.assert_called_with('test.db')
 
 
-def test_optional_commit_on(mocksql_connect):
+def test_optional_commit_on(mocks):
     """Test MemberDatabase.optional_commit commits to DB when safe=True."""
     mdb = socman.MemberDatabase('test.db', safe=True)
     mdb.optional_commit()
-    assert mocksql_connect().commit.called
+    assert mocks.sql_connect().commit.called
 
 
-def test_optional_commit_off(mocksql_connect):
+def test_optional_commit_off(mocks):
     """Test MemberDatabase.optional_commit does not commit to DB when safe=False."""
     mdb = socman.MemberDatabase('test.db', safe=False)
     mdb.optional_commit()
-    assert not mocksql_connect().commit.called
+    assert not mocks.sql_connect().commit.called
 
 
 # exception=None means member is present and will be found
 # suffix on each comment description will contain either AF, TS, both or none
 #   AF = autofix enabled
 #   TS = update_timestamp enabled
-@pytest.mark.parametrize("args,return_values,exception,calls", [
+@pytest.mark.parametrize("args,mock_returns,expected_return,exception,calls", [
     (   # member with no name or barcode (so not present!)
         {
             'member': socman.Member(None, None),
@@ -85,6 +102,7 @@ def test_optional_commit_off(mocksql_connect):
             [],
             [],
             ],
+        None,
         socman.BadMemberError,
         {
             'values': [],
@@ -106,6 +124,7 @@ def test_optional_commit_off(mocksql_connect):
             [],
             [],
             ],
+        None,
         socman.BadMemberError,
         {
             'values': [],
@@ -127,6 +146,7 @@ def test_optional_commit_off(mocksql_connect):
             [],
             [],
             ],
+        None,
         socman.BadMemberError,
         {
             'values': [],
@@ -148,6 +168,7 @@ def test_optional_commit_off(mocksql_connect):
             [],
             [],
             ],
+        None,
         socman.BadMemberError,
         {
             'values': [],
@@ -171,6 +192,7 @@ def test_optional_commit_off(mocksql_connect):
             [],
             [],
             ],
+        None,
         socman.MemberNotFoundError,
         {
             'values': [
@@ -192,19 +214,638 @@ def test_optional_commit_off(mocksql_connect):
                 },
             }
         ),
-    ])
-def test_get_member(mdb, args, return_values, exception, calls):
-    mdb.__mocksql_connect().cursor().fetchall.side_effect = return_values
+
+     (   # member not present in DB under barcode
+        {
+            'member': socman.Member('00000000',
+                                    college='Wolfson'),
+            'autofix': False,
+            'update_timestamp': False,
+            },
+        [
+            [],
+            [],
+            ],
+        None,
+        socman.MemberNotFoundError,
+        {
+            'values': [
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE barcode=?""",
+                    ('00000000',)
+                    ),
+                ],
+            'count': {
+                'execute': 1,
+                'fetchall': 1,
+                'commit': 0
+                },
+            }
+        ),
+
+    (   # member not present in DB under name
+        {
+            'member': socman.Member(barcode=None,
+                                    name=socman.Name('Ted', 'Bobson'),
+                                    college='Wolfson'),
+            'autofix': False,
+            'update_timestamp': False,
+            },
+        [
+            [],
+            [],
+            ],
+        None,
+        socman.MemberNotFoundError,
+        {
+            'values': [
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE firstName=? AND lastName=?""",
+                    ('Ted', 'Bobson')
+                    ),
+                ],
+            'count': {
+                'execute': 1,
+                'fetchall': 1,
+                'commit': 0
+                },
+            }
+        ),
+
+    (   # member with barcode only
+        # present (and unique) in DB under barcode
+        {
+            'member': socman.Member(barcode='00000000',
+                                    college='Wolfson'),
+            'autofix': False,
+            'update_timestamp': False,
+            },
+        [
+            [('Ted', 'Bobson')],
+            ],
+        ('Ted', 'Bobson'),
+        None,
+        {
+            'values': [
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE barcode=?""",
+                    ('00000000',)
+                    ),
+                ],
+            'count': {
+                'execute': 1,
+                'fetchall': 1,
+                'commit': 1
+                },
+            }
+        ),
+
+    (   # member with barcode only
+        # present (and unique) in DB under barcode [TS]
+        {
+            'member': socman.Member(barcode='00000000',
+                                    college='Wolfson'),
+            'autofix': False,
+            'update_timestamp': True,
+            },
+        [
+            [('Ted', 'Bobson')],
+            ],
+        ('Ted', 'Bobson'),
+        None,
+        {
+            'values': [
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE barcode=?""",
+                    ('00000000',)
+                    ),
+                unittest.mock.call(
+                    """UPDATE users SET last_attended=? """
+                    """WHERE barcode=?""",
+                    (datetime.date.min, '00000000')
+                    ),
+                ],
+            'count': {
+                'execute': 2,
+                'fetchall': 1,
+                'commit': 1
+                },
+            }
+        ),
+
+    (   # member with barcode only
+        # present (and unique) in DB under barcode [AF]
+        {
+            'member': socman.Member(barcode='00000000',
+                                    college='Wolfson'),
+            'autofix': True,
+            'update_timestamp': False,
+            },
+        [
+            [('Ted', 'Bobson')],
+            ],
+        ('Ted', 'Bobson'),
+        None,
+        {
+            'values': [
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE barcode=?""",
+                    ('00000000',)
+                    ),
+                ],
+            'count': {
+                'execute': 1,
+                'fetchall': 1,
+                'commit': 1
+                },
+            }
+        ),
+
+    (   # member with barcode only
+        # present (and unique) in DB under barcode [TSAF]
+        {
+            'member': socman.Member(barcode='00000000',
+                                    college='Wolfson'),
+            'autofix': True,
+            'update_timestamp': True,
+            },
+        [
+            [('Ted', 'Bobson')],
+            ],
+        ('Ted', 'Bobson'),
+        None,
+        {
+            'values': [
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE barcode=?""",
+                    ('00000000',)
+                    ),
+                unittest.mock.call(
+                    """UPDATE users SET last_attended=? """
+                    """WHERE barcode=?""",
+                    (datetime.date.min, '00000000')
+                    ),
+                ],
+            'count': {
+                'execute': 2,
+                'fetchall': 1,
+                'commit': 1
+                },
+            }
+        ),
+
+    (   # member with name and barcode
+        # present (and unique) in DB under barcode
+        {
+            'member': socman.Member(barcode='00000000',
+                                    name=socman.Name('Ted', 'Bobson'),
+                                    college='Wolfson'),
+            'autofix': False,
+            'update_timestamp': False,
+            },
+        [
+            [('Ted', 'Bobson')],
+            ],
+        ('Ted', 'Bobson'),
+        None,
+        {
+            'values': [
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE barcode=?""",
+                    ('00000000',)
+                    ),
+                ],
+            'count': {
+                'execute': 1,
+                'fetchall': 1,
+                'commit': 1
+                },
+            }
+        ),
+
+    (   # member with name and barcode
+        # present (and unique) in DB under barcode [TS]
+        {
+            'member': socman.Member(barcode='00000000',
+                                    name=socman.Name('Ted', 'Bobson'),
+                                    college='Wolfson'),
+            'autofix': False,
+            'update_timestamp': True,
+            },
+        [
+            [('Ted', 'Bobson')],
+            ],
+        ('Ted', 'Bobson'),
+        None,
+        {
+            'values': [
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE barcode=?""",
+                    ('00000000',)
+                    ),
+                unittest.mock.call(
+                    """UPDATE users SET last_attended=? """
+                    """WHERE barcode=?""",
+                    (datetime.date.min, '00000000')
+                    ),
+                ],
+            'count': {
+                'execute': 2,
+                'fetchall': 1,
+                'commit': 1
+                },
+            }
+        ),
+
+    (   # member with name and barcode
+        # present (and unique) in DB under barcode [AF]
+        {
+            'member': socman.Member(barcode='00000000',
+                                    name=socman.Name('Ted', 'Bobson'),
+                                    college='Wolfson'),
+            'autofix': True,
+            'update_timestamp': False,
+            },
+        [
+            [('Ted', 'Bobson')],
+            ],
+        ('Ted', 'Bobson'),
+        None,
+        {
+            'values': [
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE barcode=?""",
+                    ('00000000',)
+                    ),
+                unittest.mock.call(
+                    """UPDATE users SET firstName=?,lastName=? """
+                    """WHERE barcode=?""",
+                    ('Ted', 'Bobson', '00000000')
+                    ),
+                ],
+            'count': {
+                'execute': 2,
+                'fetchall': 1,
+                'commit': 1
+                },
+            }
+        ),
+
+    (   # member with name and barcode
+        # present (and unique) in DB under barcode [TSAF]
+        {
+            'member': socman.Member(barcode='00000000',
+                                    name=socman.Name('Ted', 'Bobson'),
+                                    college='Wolfson'),
+            'autofix': True,
+            'update_timestamp': True,
+            },
+        [
+            [('Ted', 'Bobson')],
+            ],
+        ('Ted', 'Bobson'),
+        None,
+        {
+            'values': [
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE barcode=?""",
+                    ('00000000',)
+                    ),
+                unittest.mock.call(
+                    """UPDATE users SET last_attended=? """
+                    """WHERE barcode=?""",
+                    (datetime.date.min, '00000000')
+                    ),
+                unittest.mock.call(
+                    """UPDATE users SET firstName=?,lastName=? """
+                    """WHERE barcode=?""",
+                    ('Ted', 'Bobson', '00000000')
+                    ),
+                ],
+            'count': {
+                'execute': 3,
+                'fetchall': 1,
+                'commit': 1
+                },
+            }
+        ),
+
+    (   # member with name only
+        # present (and unique) in DB under name
+        {
+            'member': socman.Member(barcode=None,
+                                    name=socman.Name('Ted', 'Bobson'),
+                                    college='Wolfson'),
+            'autofix': False,
+            'update_timestamp': False,
+            },
+        [
+            [('Ted', 'Bobson')],
+            ],
+        ('Ted', 'Bobson'),
+        None,
+        {
+            'values': [
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE firstName=? AND lastName=?""",
+                    ('Ted', 'Bobson')
+                    ),
+                ],
+            'count': {
+                'execute': 1,
+                'fetchall': 1,
+                'commit': 1
+                },
+            }
+        ),
+
+    (   # member with name only
+        # present (and unique) in DB under name [AF]
+        {
+            'member': socman.Member(barcode=None,
+                                    name=socman.Name('Ted', 'Bobson'),
+                                    college='Wolfson'),
+            'autofix': True,
+            'update_timestamp': False,
+            },
+        [
+            [('Ted', 'Bobson')],
+            ],
+        ('Ted', 'Bobson'),
+        None,
+        {
+            'values': [
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE firstName=? AND lastName=?""",
+                    ('Ted', 'Bobson')
+                    ),
+                ],
+            'count': {
+                'execute': 1,
+                'fetchall': 1,
+                'commit': 1
+                },
+            }
+        ),
+
+    (   # member with name only
+        # present (and unique) in DB under name [TS]
+        {
+            'member': socman.Member(barcode=None,
+                                    name=socman.Name('Ted', 'Bobson'),
+                                    college='Wolfson'),
+            'autofix': False,
+            'update_timestamp': True,
+            },
+        [
+            [('Ted', 'Bobson')],
+            ],
+        ('Ted', 'Bobson'),
+        None,
+        {
+            'values': [
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE firstName=? AND lastName=?""",
+                    ('Ted', 'Bobson')
+                    ),
+                unittest.mock.call(
+                    """UPDATE users SET last_attended=? """
+                    """WHERE firstName=? AND lastName=?""",
+                    (datetime.date.min, 'Ted', 'Bobson'),
+                    ),
+                ],
+            'count': {
+                'execute': 2,
+                'fetchall': 1,
+                'commit': 1
+                },
+            }
+        ),
+
+    (   # member with name only
+        # present (and unique) in DB under name [TSAF]
+        {
+            'member': socman.Member(barcode=None,
+                                    name=socman.Name('Ted', 'Bobson'),
+                                    college='Wolfson'),
+            'autofix': True,
+            'update_timestamp': True,
+            },
+        [
+            [('Ted', 'Bobson')],
+            ],
+        ('Ted', 'Bobson'),
+        None,
+        {
+            'values': [
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE firstName=? AND lastName=?""",
+                    ('Ted', 'Bobson')
+                    ),
+                unittest.mock.call(
+                    """UPDATE users SET last_attended=? """
+                    """WHERE firstName=? AND lastName=?""",
+                    (datetime.date.min, 'Ted', 'Bobson'),
+                    ),
+                ],
+            'count': {
+                'execute': 2,
+                'fetchall': 1,
+                'commit': 1
+                },
+            }
+        ),
+
+    (   # member with name and barcode
+        # present (and unique) in DB under *name*
+        {
+            'member': socman.Member(barcode='00000000',
+                                    name=socman.Name('Ted', 'Bobson'),
+                                    college='Wolfson'),
+            'autofix': False,
+            'update_timestamp': False,
+            },
+        [
+            [],
+            [('Ted', 'Bobson')],
+            ],
+        ('Ted', 'Bobson'),
+        None,
+        {
+            'values': [
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE barcode=?""",
+                    ('00000000', )
+                    ),
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE firstName=? AND lastName=?""",
+                    ('Ted', 'Bobson')
+                    ),
+                ],
+            'count': {
+                'execute': 2,
+                'fetchall': 2,
+                'commit': 1
+                },
+            }
+        ),
+
+    (   # member with name and barcode
+        # present (and unique) in DB under *name* [TS]
+        {
+            'member': socman.Member(barcode='00000000',
+                                    name=socman.Name('Ted', 'Bobson'),
+                                    college='Wolfson'),
+            'autofix': False,
+            'update_timestamp': True,
+            },
+        [
+            [],
+            [('Ted', 'Bobson')],
+            ],
+        ('Ted', 'Bobson'),
+        None,
+        {
+            'values': [
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE barcode=?""",
+                    ('00000000', )
+                    ),
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE firstName=? AND lastName=?""",
+                    ('Ted', 'Bobson')
+                    ),
+                unittest.mock.call(
+                    """UPDATE users SET last_attended=? """
+                    """WHERE firstName=? AND lastName=?""",
+                    (datetime.date.min, 'Ted', 'Bobson')
+                    ),
+                ],
+            'count': {
+                'execute': 3,
+                'fetchall': 2,
+                'commit': 1
+                },
+            }
+        ),
+
+    (   # member with name and barcode
+        # present (and unique) in DB under *name* [AF]
+        {
+            'member': socman.Member(barcode='00000000',
+                                    name=socman.Name('Ted', 'Bobson'),
+                                    college='Wolfson'),
+            'autofix': True,
+            'update_timestamp': False,
+            },
+        [
+            [],
+            [('Ted', 'Bobson')],
+            ],
+        ('Ted', 'Bobson'),
+        None,
+        {
+            'values': [
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE barcode=?""",
+                    ('00000000', )
+                    ),
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE firstName=? AND lastName=?""",
+                    ('Ted', 'Bobson')
+                    ),
+                unittest.mock.call(
+                    """UPDATE users SET barcode=? """
+                    """WHERE firstName=? AND lastName=?""",
+                    ('00000000', 'Ted', 'Bobson')
+                    ),
+                ],
+            'count': {
+                'execute': 3,
+                'fetchall': 2,
+                'commit': 1
+                },
+            }
+        ),
+
+    (   # member with name and barcode
+        # present (and unique) in DB under *name* [TSAF]
+        {
+            'member': socman.Member(barcode='00000000',
+                                    name=socman.Name('Ted', 'Bobson'),
+                                    college='Wolfson'),
+            'autofix': True,
+            'update_timestamp': True,
+            },
+        [
+            [],
+            [('Ted', 'Bobson')],
+            ],
+        ('Ted', 'Bobson'),
+        None,
+        {
+            'values': [
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE barcode=?""",
+                    ('00000000', )
+                    ),
+                unittest.mock.call(
+                    """SELECT firstName,lastName FROM users """
+                    """WHERE firstName=? AND lastName=?""",
+                    ('Ted', 'Bobson')
+                    ),
+                unittest.mock.call(
+                    """UPDATE users SET last_attended=? """
+                    """WHERE firstName=? AND lastName=?""",
+                    (datetime.date.min, 'Ted', 'Bobson')
+                    ),
+                unittest.mock.call(
+                    """UPDATE users SET barcode=? """
+                    """WHERE firstName=? AND lastName=?""",
+                    ('00000000', 'Ted', 'Bobson')
+                    ),
+                ],
+            'count': {
+                'execute': 4,
+                'fetchall': 2,
+                'commit': 1
+                },
+            }
+        ),
+     ])
+def test_get_member(mdb, args, mock_returns, expected_return, exception, calls):
+    mdb._mocksql_connect().cursor().fetchall.side_effect = mock_returns
 
     if not exception:
-        assert True
+        assert expected_return == mdb.get_member(**args)
     else:
         with pytest.raises(exception):
             mdb.get_member(**args)
-    mdb.__mocksql_connect().cursor().execute.assert_has_calls(calls['values'])
-    assert calls['count']['execute'] == mdb.__mocksql_connect().cursor().execute.call_count
-    assert calls['count']['fetchall'] == mdb.__mocksql_connect().cursor().fetchall.call_count
-    assert calls['count']['commit'] == mdb.__mocksql_connect().commit.call_count
+    mdb._mocksql_connect().cursor().execute.assert_has_calls(calls['values'])
+    assert calls['count']['execute'] == mdb._mocksql_connect().cursor().execute.call_count
+    assert calls['count']['fetchall'] == mdb._mocksql_connect().cursor().fetchall.call_count
+    assert calls['count']['commit'] == mdb._mocksql_connect().commit.call_count
 
 
 class MemberDatabaseTestCase(unittest.TestCase):
@@ -222,115 +863,6 @@ class MemberDatabaseTestCase(unittest.TestCase):
 
         self.mdb = socman.MemberDatabase('test.db', safe=True)
 
-    def test_get_member_barcode_not_present(self):
-        self.mocksql_connect().cursor().fetchall.return_value = []
-
-        with self.assertRaises(socman.MemberNotFoundError):
-            self.mdb.get_member(member=socman.Member(self.barcode))
-        self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode,))
-        self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
-        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
-        self.assertFalse(self.mocksql_connect().commit.called)
-
-    def test_get_member_name_not_present(self):
-        self.mocksql_connect().cursor().fetchall.return_value = []
-
-        with self.assertRaises(socman.MemberNotFoundError):
-            self.mdb.get_member(member=self.member_nobarcode)
-        self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE firstName=? AND lastName=?', (self.first_name, self.last_name))
-        self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
-        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
-        self.assertFalse(self.mocksql_connect().commit.called)
-
-    def test_get_member_barcode_present_unique(self):
-        self.mocksql_connect().cursor().fetchall.return_value = [(self.first_name, self.last_name)]
-
-        self.assertEqual((self.first_name, self.last_name), self.mdb.get_member(member=socman.Member(self.barcode), update_timestamp = False))
-        self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode,))
-        self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
-        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
-        self.assertTrue(self.mocksql_connect().commit.called)
-
-    @unittest.mock.patch('socman.date')
-    def test_get_member_barcode_present_unique_update_timestamp(self, mock_date):
-        mock_date.today.return_value = datetime.date.min
-        self.mocksql_connect().cursor().fetchall.return_value = [(self.first_name, self.last_name)]
-
-        self.assertEqual((self.first_name, self.last_name), self.mdb.get_member(member=socman.Member(self.barcode)))
-        self.mocksql_connect().cursor().execute.assert_has_calls([unittest.mock.call('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode,)), unittest.mock.call('UPDATE users SET last_attended=? WHERE barcode=?', (datetime.date.min, self.barcode))])
-        self.assertEqual(2, self.mocksql_connect().cursor().execute.call_count)
-        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
-        self.assertTrue(self.mocksql_connect().commit.called)
-
-    def test_get_member_barcode_present_unique_autofix(self):
-        self.mocksql_connect().cursor().fetchall.return_value = [(self.first_name, self.last_name)]
-
-        self.assertEqual((self.first_name, self.last_name), self.mdb.get_member(member=socman.Member(self.barcode), update_timestamp=False, autofix=True))
-        self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode,))
-        self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
-        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
-        self.assertTrue(self.mocksql_connect().commit.called)
-
-    def test_get_member_barcode_present_unique_name(self):
-        self.mocksql_connect().cursor().fetchall.side_effect = [[(self.first_name, self.last_name)], []]
-
-        self.assertEqual((self.first_name, self.last_name), self.mdb.get_member(member=self.member, update_timestamp=False, autofix=False))
-        self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode,))
-        self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
-        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
-        self.assertTrue(self.mocksql_connect().commit.called)
-
-    def test_get_member_barcode_present_unique_name_autofix(self):
-        self.mocksql_connect().cursor().fetchall.side_effect = [[(self.first_name, self.last_name)], []]
-
-        self.assertEqual((self.first_name, self.last_name), self.mdb.get_member(member=self.member, update_timestamp=False, autofix=True))
-        self.mocksql_connect().cursor().execute.assert_has_calls([unittest.mock.call('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode,)), unittest.mock.call('UPDATE users SET firstName=?,lastName=? WHERE barcode=?', (self.first_name, self.last_name, self.barcode))])
-        self.assertEqual(2, self.mocksql_connect().cursor().execute.call_count)
-        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
-        self.assertTrue(self.mocksql_connect().commit.called)
-
-    def test_get_member_name_present_unique(self):
-        self.mocksql_connect().cursor().fetchall.return_value = [(self.first_name, self.last_name)]
-
-        self.assertEqual((self.first_name, self.last_name), self.mdb.get_member(member=self.member_nobarcode, update_timestamp=False, autofix=False))
-        self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE firstName=? AND lastName=?', (self.first_name, self.last_name,))
-        self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
-        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
-
-    def test_get_member_name_present_unique_autofix(self):
-        self.mocksql_connect().cursor().fetchall.return_value = [(self.first_name, self.last_name)]
-
-        self.assertEqual((self.first_name, self.last_name), self.mdb.get_member(member=self.member_nobarcode, update_timestamp=False, autofix=True))
-        self.mocksql_connect().cursor().execute.assert_called_once_with('SELECT firstName,lastName FROM users WHERE firstName=? AND lastName=?', (self.first_name, self.last_name,))
-        self.assertEqual(1, self.mocksql_connect().cursor().execute.call_count)
-        self.assertEqual(1, self.mocksql_connect().cursor().fetchall.call_count)
-
-    def test_get_member_name_unique_present_barcode(self):
-        self.mocksql_connect().cursor().fetchall.side_effect = [[], [(self.first_name, self.last_name)]]
-
-        self.assertEqual((self.first_name, self.last_name), self.mdb.get_member(member=self.member, update_timestamp=False))
-        self.mocksql_connect().cursor().execute.assert_has_calls([unittest.mock.call('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode, )), unittest.mock.call('SELECT firstName,lastName FROM users WHERE firstName=? AND lastName=?', (self.first_name, self.last_name,))])
-        self.assertEqual(2, self.mocksql_connect().cursor().execute.call_count)
-        self.assertEqual(2, self.mocksql_connect().cursor().fetchall.call_count)
-
-    @unittest.mock.patch('socman.date')
-    def test_get_member_name_unique_present_barcode_update_timestamp(self, mock_date):
-        self.mocksql_connect().cursor().fetchall.side_effect = [[], [(self.first_name, self.last_name)]]
-        mock_date.today.return_value = datetime.date.min
-
-        self.assertEqual((self.first_name, self.last_name), self.mdb.get_member(member=self.member, update_timestamp=True))
-        self.mocksql_connect().cursor().execute.assert_has_calls([unittest.mock.call('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode, )), unittest.mock.call('SELECT firstName,lastName FROM users WHERE firstName=? AND lastName=?', (self.first_name, self.last_name,)), unittest.mock.call('UPDATE users SET last_attended=? WHERE firstName=? AND lastName=?', (datetime.date.min, self.first_name, self.last_name))])
-        self.assertEqual(3, self.mocksql_connect().cursor().execute.call_count)
-        self.assertEqual(2, self.mocksql_connect().cursor().fetchall.call_count)
-
-    def test_get_member_name_unique_present_barcode_autofix(self):
-        self.mocksql_connect().cursor().fetchall.side_effect = [[], [(self.first_name, self.last_name)]]
-
-        self.assertEqual((self.first_name, self.last_name), self.mdb.get_member(member=self.member, update_timestamp=False, autofix=True))
-        self.mocksql_connect().cursor().execute.assert_has_calls([unittest.mock.call('SELECT firstName,lastName FROM users WHERE barcode=?', (self.barcode, )), unittest.mock.call('SELECT firstName,lastName FROM users WHERE firstName=? AND lastName=?', (self.first_name, self.last_name,)), unittest.mock.call('UPDATE users SET barcode=? WHERE firstName=? AND lastName=?', (self.barcode, self.first_name, self.last_name))])
-        self.assertEqual(3, self.mocksql_connect().cursor().execute.call_count)
-        self.assertEqual(2, self.mocksql_connect().cursor().fetchall.call_count)
-        self.assertTrue(self.mocksql_connect().commit.called)
 
     def test_add_member_none(self):
         with self.assertRaises(socman.BadMemberError):
