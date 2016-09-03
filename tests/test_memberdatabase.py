@@ -66,8 +66,8 @@ def mdb(mocks):
     """Return fixture for MemberDatabase, with mocks included.
 
     Returns MemberDatabase object, with added reference to mocked
-    sqlite3.connect, mdb.mocksql_connect."""
-
+    sqlite3.connect, mdb.mocksql_connect.
+    """
     mdb_fixture = socman.MemberDatabase('test.db', safe=True)
     mdb_fixture.mocksql_connect = mocks.sql_connect
     yield mdb_fixture
@@ -81,7 +81,8 @@ def test_db_connect(mdb):
 def test_optional_commit_on(mocks):
     """Test MemberDatabase.optional_commit commits when safe=True.
 
-    Checks that sqlite3.connect().cursor().commit() is called."""
+    Checks that sqlite3.connect().cursor().commit() is called.
+    """
     mdb = socman.MemberDatabase('test.db', safe=True)
     mdb.optional_commit()
     assert mocks.sql_connect().commit.called
@@ -90,7 +91,8 @@ def test_optional_commit_on(mocks):
 def test_optional_commit_off(mocks):
     """Test MemberDatabase.optional_commit does not commit when safe=False.
 
-    Checks that sqlite3.connect().cursor().commit() is not called."""
+    Checks that sqlite3.connect().cursor().commit() is not called.
+    """
     mdb = socman.MemberDatabase('test.db', safe=False)
     mdb.optional_commit()
     assert not mocks.sql_connect().commit.called
@@ -792,7 +794,8 @@ def test_add_member_already_present(mdb, member, mock_returns, execute_call_coun
 
     In this case, no actual UPDATE operation is expected on the database, but
     during the lookup, the timestamp should be updated and the database entry
-    autofixed."""
+    autofixed.
+    """
     mdb.mocksql_connect().cursor().fetchall.side_effect = mock_returns
 
     mdb.add_member(member)
@@ -823,7 +826,8 @@ def test_add_member_already_present(mdb, member, mock_returns, execute_call_coun
 def test_add_member_not_yet_present(mdb, member, mock_returns, execute_call, execute_call_count):
     """Test add_member with a member not yet present in the database.
 
-    This is the case where the actual UPDATE operation should be performed."""
+    This is the case where the actual UPDATE operation should be performed.
+    """
     mdb.mocksql_connect().cursor().fetchall.side_effect = mock_returns
 
     mdb.add_member(member)
