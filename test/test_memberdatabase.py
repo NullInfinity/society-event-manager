@@ -117,14 +117,17 @@ def test_get_member_bad_member(mdb, member, autofix, update_timestamp):
     assert mdb.mocksql_connect().commit.call_count == 0
 
 
+CallData = collections.namedtuple('CallData', 'values count')
+
+
 @pytest.mark.parametrize("member,calls", [
     (   # member with name and barcode
         # not present in DB under barcode or name
         socman.Member(barcode='00000000',
                       name=socman.Name('Ted', 'Bobson'),
                       college='Wolfson'),
-        {
-            'values': [
+        CallData(
+            values=[
                 unittest.mock.call(
                     """SELECT firstName,lastName FROM users """
                     """WHERE barcode=?""",
@@ -136,12 +139,12 @@ def test_get_member_bad_member(mdb, member, autofix, update_timestamp):
                     ('Ted', 'Bobson')
                     ),
                 ],
-            'count': {
+            count={
                 'execute': 2,
                 'fetchall': 2,
                 'commit': 0
                 },
-            }
+            )
         ),
 
     (   # member with barcode only
@@ -149,20 +152,20 @@ def test_get_member_bad_member(mdb, member, autofix, update_timestamp):
         socman.Member(barcode='00000000',
                       name=None,
                       college='Wolfson'),
-        {
-            'values': [
+        CallData(
+            values=[
                 unittest.mock.call(
                     """SELECT firstName,lastName FROM users """
                     """WHERE barcode=?""",
                     ('00000000',)
                     ),
                 ],
-            'count': {
+            count={
                 'execute': 1,
                 'fetchall': 1,
                 'commit': 0
                 },
-            }
+            )
         ),
 
     (   # member with name only
@@ -170,20 +173,20 @@ def test_get_member_bad_member(mdb, member, autofix, update_timestamp):
         socman.Member(barcode=None,
                       name=socman.Name('Ted', 'Bobson'),
                       college='Wolfson'),
-        {
-            'values': [
+        CallData(
+            values=[
                 unittest.mock.call(
                     """SELECT firstName,lastName FROM users """
                     """WHERE firstName=? AND lastName=?""",
                     ('Ted', 'Bobson')
                     ),
                 ],
-            'count': {
+            count={
                 'execute': 1,
                 'fetchall': 1,
                 'commit': 0
                 },
-            }
+            )
         ),
     ])
 @pytest.mark.parametrize("autofix", [True, False])
@@ -196,13 +199,13 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
         mdb.get_member(member=member,
                        autofix=autofix, update_timestamp=update_timestamp)
 
-    mdb.mocksql_connect().cursor().execute.assert_has_calls(calls['values'])
+    mdb.mocksql_connect().cursor().execute.assert_has_calls(calls.values)
 
-    assert (calls['count']['execute'] ==
+    assert (calls.count['execute'] ==
             mdb.mocksql_connect().cursor().execute.call_count)
-    assert (calls['count']['fetchall'] ==
+    assert (calls.count['fetchall'] ==
             mdb.mocksql_connect().cursor().fetchall.call_count)
-    assert (calls['count']['commit'] ==
+    assert (calls.count['commit'] ==
             mdb.mocksql_connect().commit.call_count)
 
 
@@ -221,20 +224,20 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
         [
             [('Ted', 'Bobson')],
             ],
-        {
-            'values': [
+        CallData(
+            values=[
                 unittest.mock.call(
                     """SELECT firstName,lastName FROM users """
                     """WHERE barcode=?""",
                     ('00000000',)
                     ),
                 ],
-            'count': {
+            count={
                 'execute': 1,
                 'fetchall': 1,
                 'commit': 1
                 },
-            }
+            )
         ),
 
     (   # member with barcode only
@@ -248,8 +251,8 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
         [
             [('Ted', 'Bobson')],
             ],
-        {
-            'values': [
+        CallData(
+            values=[
                 unittest.mock.call(
                     """SELECT firstName,lastName FROM users """
                     """WHERE barcode=?""",
@@ -261,12 +264,12 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
                     (datetime.date.min, '00000000')
                     ),
                 ],
-            'count': {
+            count={
                 'execute': 2,
                 'fetchall': 1,
                 'commit': 1
                 },
-            }
+            )
         ),
 
     (   # member with barcode only
@@ -280,20 +283,20 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
         [
             [('Ted', 'Bobson')],
             ],
-        {
-            'values': [
+        CallData(
+            values=[
                 unittest.mock.call(
                     """SELECT firstName,lastName FROM users """
                     """WHERE barcode=?""",
                     ('00000000',)
                     ),
                 ],
-            'count': {
+            count={
                 'execute': 1,
                 'fetchall': 1,
                 'commit': 1
                 },
-            }
+            )
         ),
 
     (   # member with barcode only
@@ -307,8 +310,8 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
         [
             [('Ted', 'Bobson')],
             ],
-        {
-            'values': [
+        CallData(
+            values=[
                 unittest.mock.call(
                     """SELECT firstName,lastName FROM users """
                     """WHERE barcode=?""",
@@ -320,12 +323,12 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
                     (datetime.date.min, '00000000')
                     ),
                 ],
-            'count': {
+            count={
                 'execute': 2,
                 'fetchall': 1,
                 'commit': 1
                 },
-            }
+            )
         ),
 
     (   # member with name and barcode
@@ -340,20 +343,20 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
         [
             [('Ted', 'Bobson')],
             ],
-        {
-            'values': [
+        CallData(
+            values=[
                 unittest.mock.call(
                     """SELECT firstName,lastName FROM users """
                     """WHERE barcode=?""",
                     ('00000000',)
                     ),
                 ],
-            'count': {
+            count={
                 'execute': 1,
                 'fetchall': 1,
                 'commit': 1
                 },
-            }
+            )
         ),
 
     (   # member with name and barcode
@@ -368,8 +371,8 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
         [
             [('Ted', 'Bobson')],
             ],
-        {
-            'values': [
+        CallData(
+            values=[
                 unittest.mock.call(
                     """SELECT firstName,lastName FROM users """
                     """WHERE barcode=?""",
@@ -381,12 +384,12 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
                     (datetime.date.min, '00000000')
                     ),
                 ],
-            'count': {
+            count={
                 'execute': 2,
                 'fetchall': 1,
                 'commit': 1
                 },
-            }
+            )
         ),
 
     (   # member with name and barcode
@@ -401,8 +404,8 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
         [
             [('Ted', 'Bobson')],
             ],
-        {
-            'values': [
+        CallData(
+            values=[
                 unittest.mock.call(
                     """SELECT firstName,lastName FROM users """
                     """WHERE barcode=?""",
@@ -414,12 +417,12 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
                     ('Ted', 'Bobson', '00000000')
                     ),
                 ],
-            'count': {
+            count={
                 'execute': 2,
                 'fetchall': 1,
                 'commit': 1
                 },
-            }
+            )
         ),
 
     (   # member with name and barcode
@@ -434,8 +437,8 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
         [
             [('Ted', 'Bobson')],
             ],
-        {
-            'values': [
+        CallData(
+            values=[
                 unittest.mock.call(
                     """SELECT firstName,lastName FROM users """
                     """WHERE barcode=?""",
@@ -452,12 +455,12 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
                     ('Ted', 'Bobson', '00000000')
                     ),
                 ],
-            'count': {
+            count={
                 'execute': 3,
                 'fetchall': 1,
                 'commit': 1
                 },
-            }
+            )
         ),
 
     (   # member with name only
@@ -472,20 +475,20 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
         [
             [('Ted', 'Bobson')],
             ],
-        {
-            'values': [
+        CallData(
+            values=[
                 unittest.mock.call(
                     """SELECT firstName,lastName FROM users """
                     """WHERE firstName=? AND lastName=?""",
                     ('Ted', 'Bobson')
                     ),
                 ],
-            'count': {
+            count={
                 'execute': 1,
                 'fetchall': 1,
                 'commit': 1
                 },
-            }
+            )
         ),
 
     (   # member with name only
@@ -500,20 +503,20 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
         [
             [('Ted', 'Bobson')],
             ],
-        {
-            'values': [
+        CallData(
+            values=[
                 unittest.mock.call(
                     """SELECT firstName,lastName FROM users """
                     """WHERE firstName=? AND lastName=?""",
                     ('Ted', 'Bobson')
                     ),
                 ],
-            'count': {
+            count={
                 'execute': 1,
                 'fetchall': 1,
                 'commit': 1
                 },
-            }
+            )
         ),
 
     (   # member with name only
@@ -528,8 +531,8 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
         [
             [('Ted', 'Bobson')],
             ],
-        {
-            'values': [
+        CallData(
+            values=[
                 unittest.mock.call(
                     """SELECT firstName,lastName FROM users """
                     """WHERE firstName=? AND lastName=?""",
@@ -541,12 +544,12 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
                     (datetime.date.min, 'Ted', 'Bobson'),
                     ),
                 ],
-            'count': {
+            count={
                 'execute': 2,
                 'fetchall': 1,
                 'commit': 1
                 },
-            }
+            )
         ),
 
     (   # member with name only
@@ -561,8 +564,8 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
         [
             [('Ted', 'Bobson')],
             ],
-        {
-            'values': [
+        CallData(
+            values=[
                 unittest.mock.call(
                     """SELECT firstName,lastName FROM users """
                     """WHERE firstName=? AND lastName=?""",
@@ -574,12 +577,12 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
                     (datetime.date.min, 'Ted', 'Bobson'),
                     ),
                 ],
-            'count': {
+            count={
                 'execute': 2,
                 'fetchall': 1,
                 'commit': 1
                 },
-            }
+            )
         ),
 
     (   # member with name and barcode
@@ -595,8 +598,8 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             [],
             [('Ted', 'Bobson')],
             ],
-        {
-            'values': [
+        CallData(
+            values=[
                 unittest.mock.call(
                     """SELECT firstName,lastName FROM users """
                     """WHERE barcode=?""",
@@ -608,12 +611,12 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
                     ('Ted', 'Bobson')
                     ),
                 ],
-            'count': {
+            count={
                 'execute': 2,
                 'fetchall': 2,
                 'commit': 1
                 },
-            }
+            )
         ),
 
     (   # member with name and barcode
@@ -629,8 +632,8 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             [],
             [('Ted', 'Bobson')],
             ],
-        {
-            'values': [
+        CallData(
+            values=[
                 unittest.mock.call(
                     """SELECT firstName,lastName FROM users """
                     """WHERE barcode=?""",
@@ -647,12 +650,12 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
                     (datetime.date.min, 'Ted', 'Bobson')
                     ),
                 ],
-            'count': {
+            count={
                 'execute': 3,
                 'fetchall': 2,
                 'commit': 1
                 },
-            }
+            )
         ),
 
     (   # member with name and barcode
@@ -668,8 +671,8 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             [],
             [('Ted', 'Bobson')],
             ],
-        {
-            'values': [
+        CallData(
+            values=[
                 unittest.mock.call(
                     """SELECT firstName,lastName FROM users """
                     """WHERE barcode=?""",
@@ -686,12 +689,12 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
                     ('00000000', 'Ted', 'Bobson')
                     ),
                 ],
-            'count': {
+            count={
                 'execute': 3,
                 'fetchall': 2,
                 'commit': 1
                 },
-            }
+            )
         ),
 
     (   # member with name and barcode
@@ -707,8 +710,8 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             [],
             [('Ted', 'Bobson')],
             ],
-        {
-            'values': [
+        CallData(
+            values=[
                 unittest.mock.call(
                     """SELECT firstName,lastName FROM users """
                     """WHERE barcode=?""",
@@ -730,12 +733,12 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
                     ('00000000', 'Ted', 'Bobson')
                     ),
                 ],
-            'count': {
+            count={
                 'execute': 4,
                 'fetchall': 2,
                 'commit': 1
                 },
-            }
+            )
         ),
     ])
 def test_get_member(mdb, args, mock_returns, calls):
@@ -749,12 +752,12 @@ def test_get_member(mdb, args, mock_returns, calls):
 
     assert ('Ted', 'Bobson') == mdb.get_member(**args)
 
-    mdb.mocksql_connect().cursor().execute.assert_has_calls(calls['values'])
-    assert (calls['count']['execute'] ==
+    mdb.mocksql_connect().cursor().execute.assert_has_calls(calls.values)
+    assert (calls.count['execute'] ==
             mdb.mocksql_connect().cursor().execute.call_count)
-    assert (calls['count']['fetchall'] ==
+    assert (calls.count['fetchall'] ==
             mdb.mocksql_connect().cursor().fetchall.call_count)
-    assert (calls['count']['commit'] ==
+    assert (calls.count['commit'] ==
             mdb.mocksql_connect().commit.call_count)
 
 

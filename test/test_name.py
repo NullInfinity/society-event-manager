@@ -28,87 +28,92 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
+import collections
 import pytest
 
 import socman
 
 
+NameTestData = collections.namedtuple('NameTestData',
+                                      'names first middle last given full')
+
+
 @pytest.mark.parametrize("name,expected", [
     # empty name
-    (socman.Name(), {
-        'names': [],
-        'first': '',
-        'middle': '',
-        'last': '',
-        'given': '',
-        'full': ''
-        }),
+    (socman.Name(), NameTestData(
+        names=[],
+        first='',
+        middle='',
+        last='',
+        given='',
+        full=''
+        )),
     # first and last name
-    (socman.Name('Ted', 'Rogers'), {
-        'names': ['Ted', 'Rogers'],
-        'first':  'Ted',
-        'middle': '',
-        'last': 'Rogers',
-        'given': 'Ted',
-        'full': 'Ted Rogers'
-        }),
+    (socman.Name('Ted', 'Rogers'), NameTestData(
+        names=['Ted', 'Rogers'],
+        first='Ted',
+        middle='',
+        last='Rogers',
+        given='Ted',
+        full='Ted Rogers'
+        )),
     # last name only
-    (socman.Name('Rogers'), {
-        'names': ['Rogers'],
-        'first': '',
-        'middle': '',
-        'last': 'Rogers',
-        'given': '',
-        'full': 'Rogers'
-        }),
+    (socman.Name('Rogers'), NameTestData(
+        names=['Rogers'],
+        first='',
+        middle='',
+        last='Rogers',
+        given='',
+        full='Rogers'
+        )),
     # first name only
-    (socman.Name('Ted', None), {
-        'names': ['Ted', None],
-        'first': 'Ted',
-        'middle': '',
-        'last': '',
-        'given': 'Ted',
-        'full': 'Ted'
-        }),
+    (socman.Name('Ted', None), NameTestData(
+        names=['Ted', None],
+        first='Ted',
+        middle='',
+        last='',
+        given='Ted',
+        full='Ted'
+        )),
     # middle name only
-    (socman.Name(None, 'Bobson', None), {
-        'names': [None, 'Bobson', None],
-        'first': '',
-        'middle': 'Bobson',
-        'last': '',
-        'given': 'Bobson',
-        'full': 'Bobson'
-        }),
+    (socman.Name(None, 'Bobson', None), NameTestData(
+        names=[None, 'Bobson', None],
+        first='',
+        middle='Bobson',
+        last='',
+        given='Bobson',
+        full='Bobson'
+        )),
     # first, middle, last
-    (socman.Name('Ted', 'Bobson', 'Rogers'), {
-        'names': ['Ted', 'Bobson', 'Rogers'],
-        'first': 'Ted',
-        'middle': 'Bobson',
-        'last': 'Rogers',
-        'given': 'Ted Bobson',
-        'full': 'Ted Bobson Rogers'
-        }),
+    (socman.Name('Ted', 'Bobson', 'Rogers'), NameTestData(
+        names=['Ted', 'Bobson', 'Rogers'],
+        first='Ted',
+        middle='Bobson',
+        last='Rogers',
+        given='Ted Bobson',
+        full='Ted Bobson Rogers'
+        )),
     # first, middle, middle, last
-    (socman.Name('Ted', 'Bobson', 'Rickerton', 'Rogers'), {
-        'names': ['Ted', 'Bobson', 'Rickerton', 'Rogers'],
-        'first': 'Ted',
-        'middle': 'Bobson Rickerton',
-        'last': 'Rogers',
-        'given': 'Ted Bobson Rickerton',
-        'full': 'Ted Bobson Rickerton Rogers'
-        })
+    (socman.Name('Ted', 'Bobson', 'Rickerton', 'Rogers'), NameTestData(
+        names=['Ted', 'Bobson', 'Rickerton', 'Rogers'],
+        first='Ted',
+        middle='Bobson Rickerton',
+        last='Rogers',
+        given='Ted Bobson Rickerton',
+        full='Ted Bobson Rickerton Rogers'
+        ))
 ])
 def test_name_strings(name, expected):
     """Check each part of the Name is returned correctly.
 
     The parts are: first, middle, last, given (first + middle) and full
     """
-    assert name.names == expected['names']
-    assert name.first() == expected['first']
-    assert name.middle() == expected['middle']
-    assert name.last() == expected['last']
-    assert name.given() == expected['given']
-    assert name.full() == expected['full']
+    assert name.names == expected.names
+    assert name.first() == expected.first
+    assert name.middle() == expected.middle
+    assert name.last() == expected.last
+    assert name.given() == expected.given
+    assert name.full() == expected.full
 
 
 @pytest.mark.parametrize("name", [
