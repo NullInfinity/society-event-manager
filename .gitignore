@@ -6,3 +6,4 @@ env*/
 .coverage
 wiki/
 .cache
+*.egg-info
