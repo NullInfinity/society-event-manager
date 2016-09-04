@@ -29,5 +29,5 @@ setuptools.setup(
         'Programming Language :: Python :: 3.6',
         ],
     keywords='society group membership',
-    packages=setuptools.find_packages(exclude=['docs', 'test']),
+    py_modules=['socman'],
     )
