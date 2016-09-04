@@ -25,10 +25,10 @@ before_install:
 
 install:
   - pip install coveralls
-  - pip install 'pytest>=3'
-  - pip install pytest-cov
+  - pip install 'pytest>=3' pytest-cov pytest-pep8
+  - pip install -e .
 
-script: python -m pytest --cov=socman --cov-report= test/
+script: pytest --cov=socman --cov-report= --pep8 test/*
 
 after_success:
   - coveralls

@@ -12,7 +12,8 @@ environment:
 build: off
 
 install:
-  - "%PYTHON%\\python.exe -m pip install pytest"
+  - "%PYTHON%\\python.exe -m pip install pytest pytest-pep8"
+  - "%PYTHON%\\python.exe -m pip install -e %APPVEYOR_BUILD_FOLDER%"
 
 test_script:
-  - "%PYTHON%\\python.exe -m pytest -q %APPVEYOR_BUILD_FOLDER%\\test\\"
+  - "%PYTHON%\\python.exe -m pytest -q --pep8 %APPVEYOR_BUILD_FOLDER%\\test\\"
