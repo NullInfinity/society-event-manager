@@ -15,4 +15,4 @@ install:
   - "%PYTHON%\\python.exe -m pip install pytest"
 
 test_script:
-  - "%PYTHON%\\python.exe -m pytest -q %APPVEYOR_BUILD_FOLDER%\\tests\\"
+  - "%PYTHON%\\python.exe -m pytest -q %APPVEYOR_BUILD_FOLDER%\\test\\"

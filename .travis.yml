@@ -28,7 +28,7 @@ install:
   - pip install 'pytest>=3'
   - pip install pytest-cov
 
-script: python -m pytest --cov=socman --cov-report= tests/
+script: python -m pytest --cov=socman --cov-report= test/
 
 after_success:
   - coveralls

@@ -1,2 +1,2 @@
 test:
-	PYTHONPATH=. pytest -q --ignore env tests/*
+	PYTHONPATH=. pytest -q --ignore env test/*
