@@ -196,7 +196,8 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
         mdb.get_member(member=member,
                        autofix=autofix, update_timestamp=update_timestamp)
 
-        mdb.mocksql_connect().cursor().execute.assert_has_calls(calls['values'])
+    mdb.mocksql_connect().cursor().execute.assert_has_calls(calls['values'])
+
     assert (calls['count']['execute'] ==
             mdb.mocksql_connect().cursor().execute.call_count)
     assert (calls['count']['fetchall'] ==
@@ -813,7 +814,7 @@ def test_add_member_already_present(mdb, member, mock_returns,
             mdb.mocksql_connect().cursor().execute.call_count)
 
 
-@pytest.mark.parametrize("member,mock_returns,execute_call,execute_call_count", [
+@pytest.mark.parametrize("member,mock_returns,execute_call", [
     (   # member with name and barcode
         socman.Member(barcode='00000000',
                       name=socman.Name('Ted', 'Bobson'),
@@ -822,19 +823,21 @@ def test_add_member_already_present(mdb, member, mock_returns,
             [],
             [],
             ],
-        (
-            """INSERT INTO users (barcode, firstName, lastName, """
-            """college, datejoined, created_at, updated_at, last_attended) """
-            """VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-            ('00000000', 'Ted', 'Bobson', 'Wolfson',
-             datetime.date.min, datetime.datetime.min,
-             datetime.datetime.min, datetime.date.min)
-            ),
-        3  # 2 lookups (name and barcode) + 1 update query
+        {
+            'value': (
+                """INSERT INTO users (barcode, firstName, lastName, """
+                """college, datejoined, """
+                """created_at, updated_at, last_attended) """
+                """VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                ('00000000', 'Ted', 'Bobson', 'Wolfson',
+                 datetime.date.min, datetime.datetime.min,
+                 datetime.datetime.min, datetime.date.min)
+                ),
+            'count': 3  # 2 lookups (name and barcode) + 1 update query
+            },
         ),
     ])
-def test_add_member_not_yet_present(mdb, member, mock_returns,
-                                    execute_call, execute_call_count):
+def test_add_member_not_yet_present(mdb, member, mock_returns, execute_call):
     """Test add_member with a member not yet present in the database.
 
     This is the case where the actual UPDATE operation should be performed.
@@ -843,6 +846,7 @@ def test_add_member_not_yet_present(mdb, member, mock_returns,
 
     mdb.add_member(member)
 
-    mdb.mocksql_connect().cursor().execute.assert_called_with(*execute_call)
-    assert (execute_call_count ==
+    mdb.mocksql_connect().cursor().execute.assert_called_with(
+        *execute_call['value'])
+    assert (execute_call['count'] ==
             mdb.mocksql_connect().cursor().execute.call_count)
