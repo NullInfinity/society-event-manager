@@ -124,10 +124,10 @@ def test_name_true(name):
 @pytest.mark.parametrize("name", [
     socman.Name(),
     socman.Name(None),
-    #TODO uncomment these (currently failing tests) and make them pass
-    #socman.Name(''),
-    #socman.Name('', ''),
-    #socman.Name('', None)
+    # TODO uncomment these (currently failing tests) and make them pass
+    # socman.Name(''),
+    # socman.Name('', ''),
+    # socman.Name('', None)
     ])
 def test_falsiness(name):
     """Test Name.__bool__ on False names."""
