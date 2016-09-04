@@ -38,6 +38,9 @@ class Error(Exception):
 
     """The base class for exceptions in socman."""
 
+    def __init__(self, *args):
+        Exception.__init__(self, *args)
+
 
 class BadMemberError(Error):
 
@@ -47,8 +50,9 @@ class BadMemberError(Error):
         member: the bad member object
     """
 
-    def __init__(self, member):
+    def __init__(self, member, *args):
         """Create a BadMemberError for member object `member`."""
+        Error.__init__(self, *args)
         self.member = member
 
 
@@ -60,8 +64,9 @@ class MemberNotFoundError(Error):
         member: the member object
     """
 
-    def __init__(self, member):
+    def __init__(self, member, *args):
         """Create a MemberNotFoundError for member object `member`."""
+        Error.__init__(self, *args)
         self.member = member
 
 
