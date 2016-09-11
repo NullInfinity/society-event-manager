@@ -29,7 +29,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-from collections import namedtuple
+import collections
 from datetime import date, datetime
 import sqlite3
 
@@ -84,7 +84,7 @@ class Name:
 
         Arguments:
             names:  A list of names which should be strings (or None)
-            sep:    The separator between names when concatenated to form strings.
+            sep:    The separator used when concatenating parts of the name.
 
         To create a name with just a first name, pass None as the last name:
 
@@ -148,7 +148,7 @@ class Name:
         return self.__makestr(self.names)
 
 
-Member = namedtuple('Member', 'barcode name college')
+Member = collections.namedtuple('Member', 'barcode name college')
 Member.__new__.__defaults__ = (None, None)
 Member.__doc__ = """
                  A society member.
