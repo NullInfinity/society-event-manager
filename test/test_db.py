@@ -28,8 +28,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 # pylint: disable=redefined-outer-name
-import pytest
+import datetime
 import sqlite3
+
+import pytest
 
 import socman
 
@@ -37,15 +39,81 @@ import socman
 @pytest.fixture
 def db_file(tmpdir):
     """Create test DB file with sample entries."""
-    db_path = os.path.join(tmpdir, 'test.db')
+    db_path = str(tmpdir.join('test.db'))
     conn = sqlite3.connect(db_path)
 
     cursor = conn.cursor()
+
+    cursor.execute("""CREATE TABLE users ("""
+                   """id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, """
+                   """firstName VARCHAR(255), """
+                   """lastName VARCHAR(255), """
+                   """barcode INTEGER, """
+                   """datejoined DATE, """
+                   """created_at DATETIME, """
+                   """updated_at DATETIME, """
+                   """college VARCHAR(255), """
+                   """last_attended DATE)"""
+                   )
+
     cursor.execute("""INSERT INTO users """
                    """(firstName,lastName,barcode,college,"""
-                   """datejoined,created_at,updated_at,last_attended)""")
+                   """datejoined,created_at,updated_at,last_attended) """
+                   """VALUES (?,?,?,?,?,?,?,?)""",
+                   ('Ted', 'Bobson', '12341234', 'Wolfson',
+                       datetime.date.min, datetime.datetime.min,
+                       datetime.datetime.min, datetime.date.min))
 
     conn.commit()
     conn.close()
 
-    yield dp_path
+    yield db_path
+
+
+@pytest.fixture
+def mdb(db_file):
+    return socman.MemberDatabase(db_file)
+
+
+def test_get_member_bad_member_(mdb):
+    with pytest.raises(socman.BadMemberError):
+        mdb.get_member(None)
+
+
+@pytest.mark.parametrize('member', [
+    socman.Member('11111111'),
+    socman.Member(None, socman.Name('Bill', 'Rogers')),
+    socman.Member('11111111', socman.Name('Bill', 'Rogers'))
+    ])
+def test_get_member_not_present(mdb, member):
+    """Test get_member against member not present in database."""
+    with pytest.raises(socman.MemberNotFoundError):
+        mdb.get_member(member)
+
+
+@pytest.mark.parametrize('member', [
+    socman.Member('12341234'),
+    socman.Member(None, socman.Name('Ted', 'Bobson')),
+    socman.Member('12341234', socman.Name('Ted', 'Bobson')),
+    socman.Member('12341234', socman.Name('Bill', 'Rogers')),
+    socman.Member('11111111', socman.Name('Ted', 'Bobson')),
+    ])
+@pytest.mark.parametrize('autofix', [True, False])
+def test_get_member_present(mdb, member, autofix):
+    assert ('Ted', 'Bobson') == mdb.get_member(member, autofix=autofix)
+    if autofix and member.barcode and member.name:
+        assert ((member.name.given(), member.name.last()) ==
+            mdb.get_member(socman.Member(member.barcode)))
+
+#@pytest.mark.parametrize('member', [
+#    socman.Member('12341234'),
+#    socman.Member(None, socman.Name('Ted', 'Bobson')),
+#    socman.Member('12341234', socman.Name('Ted', 'Bobson')),
+#    socman.Member('12341234', socman.Name('Bill', 'Rogers')),
+#    socman.Member('11111111', socman.Name('Ted', 'Bobson')),
+#    ])
+#def test_add_member_already_present(mdb, member):
+#    """Test that adding an already present member runs autofix."""
+#    mdb.add_member(member)
+#    assert ((member.name.given(), member.name.last()) ==
+#        mdb.get_member(socman.Member(member.barcode)))
