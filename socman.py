@@ -393,7 +393,7 @@ class MemberDatabase:
             BadMemberError: The member passed to `get_member` has neither name
                             nor barcode.
         """
-        if not member or not member.barcode or not member.name:
+        if not member or not (member.barcode or member.name):
             raise BadMemberError(member)
 
         try:

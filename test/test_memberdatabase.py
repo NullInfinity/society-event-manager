@@ -800,6 +800,27 @@ def test_add_member_none_member(mdb, member):
         4,  # 2 for barcode then name lookup
             # 2 for autofix and update_timestamp
         ),
+    (   # member with barcode
+        # already present under barcode
+        socman.Member(barcode='00000000',
+                      college='Wolfson'),
+        [
+            [('', '')],
+            ],
+        2,  # 1 for barcode lookup, 1 for update_timestamp
+        ),
+    (   # member with name
+        # already present under name
+        socman.Member(None,
+                      name=socman.Name('Ted', 'Bobson'),
+                      college='Wolfson'),
+        [
+            [],
+            [('Ted', 'Bobson')],
+            ],
+        2,  # 1 for name lookup
+            # 1 update_timestamp
+        ),
     ])
 def test_add_member_already_present(mdb, member, mock_returns,
                                     execute_call_count):
