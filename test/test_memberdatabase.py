@@ -874,3 +874,12 @@ def test_add_member_not_yet_present(mdb, member, mock_returns, execute_call):
         *execute_call['value'])
     assert (execute_call['count'] ==
             mdb.mocksql_connect().cursor().execute.call_count)
+
+
+def test_member_count(mdb):
+    """Test that member_count correctly queries the database.
+
+    It should request the number of rows in the `users` table.
+    """
+    mdb.mocksql_connect().cursor().fetchone.return_value = (5,)
+    assert 5 == mdb.member_count()

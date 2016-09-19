@@ -364,15 +364,13 @@ class MemberDatabase:
         return users[0]
 
     def __sql_add_query(self, member):
-        return (
-                """INSERT INTO users (barcode, firstName, """
+        return ("""INSERT INTO users (barcode, firstName, """
                 """lastName, college, """
                 """datejoined, created_at, updated_at, last_attended) """
                 """VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                 (member.barcode, member.name.first(), member.name.last(),
                  member.college, date.today(), datetime.utcnow(),
-                 datetime.utcnow(), date.today())
-            )
+                 datetime.utcnow(), date.today()))
 
     def add_member(self, member):
         """Add a member to the database.
@@ -409,3 +407,12 @@ class MemberDatabase:
 
         # direct commit here: don't want to lose new member data
         self.__connection.commit()
+
+    def member_count(self):
+        """Return the number of members in the database.
+
+        This is the number of rows in the `users` table.
+        """
+        cursor = self.__connection.cursor()
+        cursor.execute('SELECT COUNT(*) FROM users')
+        return int(cursor.fetchone()[0])
