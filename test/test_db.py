@@ -38,7 +38,7 @@ import socman
 
 @pytest.fixture
 def db_file(tmpdir):
-    """Create test DB file with sample entries."""
+    """Return the path to a test database file with sample entries."""
     db_path = str(tmpdir.join('test.db'))
     conn = sqlite3.connect(db_path)
 
@@ -53,16 +53,15 @@ def db_file(tmpdir):
                    """created_at DATETIME, """
                    """updated_at DATETIME, """
                    """college VARCHAR(255), """
-                   """last_attended DATE)"""
-                   )
+                   """last_attended DATE)""")
 
     cursor.execute("""INSERT INTO users """
                    """(firstName,lastName,barcode,college,"""
                    """datejoined,created_at,updated_at,last_attended) """
                    """VALUES (?,?,?,?,?,?,?,?)""",
                    ('Ted', 'Bobson', '12341234', 'Wolfson',
-                       datetime.date.min, datetime.datetime.min,
-                       datetime.datetime.min, datetime.date.min))
+                    datetime.date.min, datetime.datetime.min,
+                    datetime.datetime.min, datetime.date.min))
 
     conn.commit()
     conn.close()
@@ -72,10 +71,15 @@ def db_file(tmpdir):
 
 @pytest.fixture
 def mdb(db_file):
+    """Return a fixture to a MemberDatabase connected to a real database."""
     return socman.MemberDatabase(db_file)
 
 
 def test_get_member_bad_member_(mdb):
+    """Test that get_member raises an error if passed a bad member object.
+
+    In particular, it should raise socman.BadMemberError.
+    """
     with pytest.raises(socman.BadMemberError):
         mdb.get_member(None)
 
@@ -86,7 +90,9 @@ def test_get_member_bad_member_(mdb):
     socman.Member('11111111', socman.Name('Bill', 'Rogers'))
     ])
 def test_get_member_not_present(mdb, member):
-    """Test get_member against member not present in database."""
+    """Test that get_member raises an error if a member is not present.
+
+    In particular, it should raise socman.MemberNotFoundError."""
     with pytest.raises(socman.MemberNotFoundError):
         mdb.get_member(member)
 
@@ -100,20 +106,48 @@ def test_get_member_not_present(mdb, member):
     ])
 @pytest.mark.parametrize('autofix', [True, False])
 def test_get_member_present(mdb, member, autofix):
+    """Test that get_member retrieves members present in the database."""
     assert ('Ted', 'Bobson') == mdb.get_member(member, autofix=autofix)
     if autofix and member.barcode and member.name:
         assert ((member.name.given(), member.name.last()) ==
-            mdb.get_member(socman.Member(member.barcode)))
+                mdb.get_member(socman.Member(member.barcode)))
 
-#@pytest.mark.parametrize('member', [
-#    socman.Member('12341234'),
-#    socman.Member(None, socman.Name('Ted', 'Bobson')),
-#    socman.Member('12341234', socman.Name('Ted', 'Bobson')),
-#    socman.Member('12341234', socman.Name('Bill', 'Rogers')),
-#    socman.Member('11111111', socman.Name('Ted', 'Bobson')),
-#    ])
-#def test_add_member_already_present(mdb, member):
-#    """Test that adding an already present member runs autofix."""
-#    mdb.add_member(member)
-#    assert ((member.name.given(), member.name.last()) ==
-#        mdb.get_member(socman.Member(member.barcode)))
+
+@pytest.mark.parametrize('member', [
+    socman.Member('12341234'),
+    socman.Member(None, socman.Name('Ted', 'Bobson')),
+    socman.Member('12341234', socman.Name('Ted', 'Bobson')),
+    socman.Member('12341234', socman.Name('Bill', 'Rogers')),
+    socman.Member('11111111', socman.Name('Ted', 'Bobson')),
+    ])
+def test_add_member_already_present(mdb, member):
+    """Test add_member on a member already present in the database.
+
+    Autofix should be run if possible.
+    No new rows should be added to the database.
+    """
+    mdb.add_member(member)
+    if member.barcode and member.name:
+        assert ((member.name.given(), member.name.last()) ==
+                mdb.get_member(socman.Member(member.barcode)))
+    assert mdb.member_count() == 1
+
+
+@pytest.mark.parametrize('member', [
+    socman.Member('43214321'),
+    socman.Member(None, socman.Name('Bill', 'Rogers')),
+    socman.Member('43214321', socman.Name('Bill', 'Rogers')),
+    ])
+def test_add_member_not_present(mdb, member):
+    """Test add_member on a member not present in the database.
+
+    A new row should be added and the member should be found by get_member.
+    """
+    mdb.add_member(member)
+
+    expected_name = ('', '')
+    if member.name:
+        expected_name = (member.name.given(), member.name.last())
+
+    assert expected_name == mdb.get_member(member)
+    assert mdb.member_count() == 2

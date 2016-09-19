@@ -15,7 +15,7 @@ existing code. Major targets for the first release (v0.1) are:
 
 * [X] support OSX and Windows for automated testing
 * [X] use py.test for testing
-* [ ] add functional tests using real database files
+* [X] add functional tests using real database files
 * [ ] simplify logic in MemberDatabase
 * [ ] publish the library on PyPI
 
