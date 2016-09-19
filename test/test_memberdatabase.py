@@ -860,6 +860,67 @@ def test_add_member_already_present(mdb, member, mock_returns,
             'count': 3  # 2 lookups (name and barcode) + 1 update query
             },
         ),
+    (   # member with barcode only
+        socman.Member(barcode='00000000',
+                      college='Wolfson'),
+        [
+            [],
+            [],
+            ],
+        {
+            'value': (
+                """INSERT INTO users (barcode, firstName, lastName, """
+                """college, datejoined, """
+                """created_at, updated_at, last_attended) """
+                """VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                ('00000000', '', '', 'Wolfson',
+                 datetime.date.min, datetime.datetime.min,
+                 datetime.datetime.min, datetime.date.min)
+                ),
+            'count': 2  # 1 lookup (barcode) + 1 update query
+            },
+        ),
+    (   # member with name only
+        socman.Member(None,
+                      name=socman.Name('Ted', 'Bobson'),
+                      college='Wolfson'),
+        [
+            [],
+            [],
+            ],
+        {
+            'value': (
+                """INSERT INTO users (barcode, firstName, lastName, """
+                """college, datejoined, """
+                """created_at, updated_at, last_attended) """
+                """VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                ('', 'Ted', 'Bobson', 'Wolfson',
+                 datetime.date.min, datetime.datetime.min,
+                 datetime.datetime.min, datetime.date.min)
+                ),
+            'count': 2  # 1 lookups (name) + 1 update query
+            },
+        ),
+    (   # member with name and barcode but no college
+        socman.Member(barcode='00000000',
+                      name=socman.Name('Ted', 'Bobson')),
+        [
+            [],
+            [],
+            ],
+        {
+            'value': (
+                """INSERT INTO users (barcode, firstName, lastName, """
+                """college, datejoined, """
+                """created_at, updated_at, last_attended) """
+                """VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                ('00000000', 'Ted', 'Bobson', '',
+                 datetime.date.min, datetime.datetime.min,
+                 datetime.datetime.min, datetime.date.min)
+                ),
+            'count': 3  # 2 lookups (name and barcode) + 1 update query
+            },
+        ),
     ])
 def test_add_member_not_yet_present(mdb, member, mock_returns, execute_call):
     """Test add_member with a member not yet present in the database.
