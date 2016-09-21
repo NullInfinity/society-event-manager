@@ -192,8 +192,6 @@ class MemberDatabase:
             self.__connection.commit()
 
     def __sql_build_name_value_pairs(self, member, sep):
-        if not member.name:
-            return None, None
         columns = []
         values = ()
         if member.name.first():
@@ -206,66 +204,42 @@ class MemberDatabase:
             return None, None
         return sep.join(columns), values
 
-    def __sql_search_barcode_phrase(self, member):
-        if not member.barcode:
-            return None, None
-        return 'barcode=?', (member.barcode, )
-
     def __sql_search_name_phrase(self, member):
-        if not member.name:
-            return None, None
         return self.__sql_build_name_value_pairs(member, ' AND ')
 
-    def __sql_search_phrase(self, member):
-        phrase, values = self.__sql_search_barcode_phrase(member)
-        if not phrase:
-            phrase, values = self.__sql_search_name_phrase(member)
-        return phrase, values
-
     def __sql_update_barcode_phrase(self, member):
-        if not member.barcode:
-            return None, None
         return ('barcode=?', (member.barcode,))
 
     def __sql_update_name_phrase(self, member):
         return self.__sql_build_name_value_pairs(member, ',')
 
-    def __sql_search_query(self, member):
-        phrase, values = self.__sql_search_phrase(member)
-        if not phrase:
-            return None, None
-        return ('SELECT firstName,lastName FROM users WHERE ' + phrase, values)
-
     def __sql_search_barcode_query(self, member):
         phrase, values = self.__sql_search_barcode_phrase(member)
-        if not phrase:
-            return None, None
-        return ('SELECT firstName,lastName FROM users WHERE ' + phrase, values)
+        return ('SELECT firstName,lastName FROM users WHERE ' + phrase, (member.barcode, ))
+
+    def __sql_search_barcode_phrase(self, member):
+        return 'barcode=?', (member.barcode, )
 
     def __sql_search_name_query(self, member):
         phrase, values = self.__sql_search_name_phrase(member)
-        if not phrase:
-            return None, None
         return ('SELECT firstName,lastName FROM users WHERE ' + phrase, values)
 
     def __sql_update_barcode_query(self, member):
         set_phrase, set_values = self.__sql_update_barcode_phrase(member)
         search_phrase, search_values = self.__sql_search_name_phrase(member)
-        if not set_phrase or not search_phrase:
-            return None, None
         return ('UPDATE users SET ' + set_phrase + ' WHERE ' + search_phrase, set_values + search_values)
 
     def __sql_update_name_query(self, member):
         set_phrase, set_values = self.__sql_update_name_phrase(member)
         search_phrase, search_values = self.__sql_search_barcode_phrase(member)
-        if not set_phrase or not search_phrase:
-            return None, None
         return ('UPDATE users SET ' + set_phrase + ' WHERE ' + search_phrase, set_values + search_values)
 
-    def __sql_update_last_attended_query(self, member):
-        search_phrase, search_values = self.__sql_search_phrase(member)
-        if not search_phrase:
-            return None, None
+    def __sql_update_last_attended_query_barcode(self, member):
+        search_phrase, search_values = self.__sql_search_barcode_phrase(member)
+        return ('UPDATE users SET last_attended=? WHERE ' + search_phrase, (date.today(),) + search_values)
+
+    def __sql_update_last_attended_query_name(self, member):
+        search_phrase, search_values = self.__sql_search_name_phrase(member)
         return ('UPDATE users SET last_attended=? WHERE ' + search_phrase, (date.today(),) + search_values)
 
     def get_member(self, member=None, update_timestamp=True, autofix=False):
@@ -308,26 +282,24 @@ class MemberDatabase:
         # TODO implement deduping and better handling of duplicate records
         cursor = self.__connection.cursor()
 
-        if not member or (not member.barcode and not member.name):
+        if not member or not (member.barcode or member.name):
             raise BadMemberError(member)
 
-        # first try to find member by barcode, if available
-        query, values = self.__sql_search_barcode_query(member)
-        if query:
+        # first try to find member by barcode, if possible
+        if member.barcode:
+            query, values = self.__sql_search_barcode_query(member)
             cursor.execute(query, values)
             users = cursor.fetchall()
             if users:
                 # if necessary update last_attended date
                 if update_timestamp:
-                    ts_query, ts_values = self.__sql_update_last_attended_query(member)
-                    if ts_query:
-                        cursor.execute(ts_query, ts_values)
+                    ts_query, ts_values = self.__sql_update_last_attended_query_barcode(member)
+                    cursor.execute(ts_query, ts_values)
 
                 # if autofix is set and both names are provided, correct names
-                if autofix:
+                if autofix and member.name:
                     af_query, af_values = self.__sql_update_name_query(member)
-                    if af_query:
-                        cursor.execute(af_query, af_values)
+                    cursor.execute(af_query, af_values)
 
                 # in case we updated timestamp or names, commit
                 self.optional_commit()
@@ -336,32 +308,28 @@ class MemberDatabase:
                 return users[0]
 
         # barcode lookup failed; now try finding by name
-        query, values = self.__sql_search_name_query(member)
-        if not query:
-            raise MemberNotFoundError(member)
+        if member.name:
+            query, values = self.__sql_search_name_query(member)
 
-        cursor.execute(query, values)
-        users = cursor.fetchall()
+            cursor.execute(query, values)
+            users = cursor.fetchall()
 
-        if not users:
-            raise MemberNotFoundError(member)
+            if users:
+                # found them so update last_attended if update_timestamp is set
+                if update_timestamp:
+                    ts_query, ts_values = self.__sql_update_last_attended_query_name(member)
+                    cursor.execute(ts_query, ts_values)
+                # and barcode if autofix is set
+                if autofix and member.barcode:
+                    af_query, af_values = self.__sql_update_barcode_query(member)
+                    cursor.execute(af_query, af_values)
 
-        # found them so update last_attended if update_timestamp is set
-        if update_timestamp:
-            # todo find better way to choose search phrase (barcode/name)
-            temp_member = member._replace(barcode=None)
-            ts_query, ts_values = self.__sql_update_last_attended_query(temp_member)
-            if ts_query:
-                cursor.execute(ts_query, ts_values)
-        # and barcode if autofix is set
-        if autofix and member.barcode:
-            af_query, af_values = self.__sql_update_barcode_query(member)
-            cursor.execute(af_query, af_values)
+                self.optional_commit()
 
-        self.optional_commit()
+                # TODO dedupe if necessary
+                return users[0]
 
-        # TODO dedupe if necessary
-        return users[0]
+        raise MemberNotFoundError(member)
 
     def __sql_add_query(self, member):
         barcode = member.barcode
