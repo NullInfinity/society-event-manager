@@ -142,7 +142,6 @@ CallData = collections.namedtuple('CallData', 'values count')
             count={
                 'execute': 2,
                 'fetchall': 2,
-                'commit': 0
                 },
             )
         ),
@@ -163,7 +162,6 @@ CallData = collections.namedtuple('CallData', 'values count')
             count={
                 'execute': 1,
                 'fetchall': 1,
-                'commit': 0
                 },
             )
         ),
@@ -184,7 +182,6 @@ CallData = collections.namedtuple('CallData', 'values count')
             count={
                 'execute': 1,
                 'fetchall': 1,
-                'commit': 0
                 },
             )
         ),
@@ -205,8 +202,7 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             mdb.mocksql_connect().cursor().execute.call_count)
     assert (calls.count['fetchall'] ==
             mdb.mocksql_connect().cursor().fetchall.call_count)
-    assert (calls.count['commit'] ==
-            mdb.mocksql_connect().commit.call_count)
+    assert 0 == mdb.mocksql_connect().commit.call_count
 
 
 @pytest.mark.parametrize("args,mock_returns,calls", [
@@ -232,7 +228,6 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             count={
                 'execute': 1,
                 'fetchall': 1,
-                'commit': 0
                 },
             )
         ),
@@ -264,7 +259,6 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             count={
                 'execute': 2,
                 'fetchall': 1,
-                'commit': 1
                 },
             )
         ),
@@ -291,7 +285,6 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             count={
                 'execute': 1,
                 'fetchall': 1,
-                'commit': 1
                 },
             )
         ),
@@ -323,7 +316,6 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             count={
                 'execute': 2,
                 'fetchall': 1,
-                'commit': 1
                 },
             )
         ),
@@ -351,7 +343,6 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             count={
                 'execute': 1,
                 'fetchall': 1,
-                'commit': 0
                 },
             )
         ),
@@ -384,7 +375,6 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             count={
                 'execute': 2,
                 'fetchall': 1,
-                'commit': 1
                 },
             )
         ),
@@ -417,7 +407,6 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             count={
                 'execute': 2,
                 'fetchall': 1,
-                'commit': 1
                 },
             )
         ),
@@ -455,7 +444,6 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             count={
                 'execute': 3,
                 'fetchall': 1,
-                'commit': 1
                 },
             )
         ),
@@ -483,7 +471,6 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             count={
                 'execute': 1,
                 'fetchall': 1,
-                'commit': 0
                 },
             )
         ),
@@ -511,7 +498,6 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             count={
                 'execute': 1,
                 'fetchall': 1,
-                'commit': 1
                 },
             )
         ),
@@ -544,7 +530,6 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             count={
                 'execute': 2,
                 'fetchall': 1,
-                'commit': 1
                 },
             )
         ),
@@ -577,7 +562,6 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             count={
                 'execute': 2,
                 'fetchall': 1,
-                'commit': 1
                 },
             )
         ),
@@ -611,7 +595,6 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             count={
                 'execute': 2,
                 'fetchall': 2,
-                'commit': 0
                 },
             )
         ),
@@ -650,7 +633,6 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             count={
                 'execute': 3,
                 'fetchall': 2,
-                'commit': 1
                 },
             )
         ),
@@ -689,7 +671,6 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             count={
                 'execute': 3,
                 'fetchall': 2,
-                'commit': 1
                 },
             )
         ),
@@ -733,7 +714,6 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             count={
                 'execute': 4,
                 'fetchall': 2,
-                'commit': 1
                 },
             )
         ),
@@ -754,7 +734,7 @@ def test_get_member(mdb, args, mock_returns, calls):
             mdb.mocksql_connect().cursor().execute.call_count)
     assert (calls.count['fetchall'] ==
             mdb.mocksql_connect().cursor().fetchall.call_count)
-    assert (calls.count['commit'] ==
+    assert (int(args['autofix'] or args['update_timestamp']) ==
             mdb.mocksql_connect().commit.call_count)
 
 
