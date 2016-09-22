@@ -158,4 +158,5 @@ def test_member_count(mdb, member_count):
     """Test member_count on databases of different sizes."""
     for i in range(0, member_count):
         mdb.add_member(socman.Member(str(i)))
-    assert member_count + 1 == mdb.member_count()  # +1 as setup method already added one member
+    # expect member_count+1 entries because mdb fixture already added one
+    assert member_count + 1 == mdb.member_count()
