@@ -151,3 +151,11 @@ def test_add_member_not_present(mdb, member):
 
     assert expected_name == mdb.get_member(member)
     assert mdb.member_count() == 2
+
+
+@pytest.mark.parametrize('member_count', range(1, 10))
+def test_member_count(mdb, member_count):
+    """Test member_count on databases of different sizes."""
+    for i in range(0, member_count):
+        mdb.add_member(socman.Member(str(i)))
+    assert member_count + 1 == mdb.member_count()  # +1 as setup method already added one member
