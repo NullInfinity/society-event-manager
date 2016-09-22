@@ -31,6 +31,7 @@ SOFTWARE.
 
 import collections
 from datetime import date, datetime
+import operator
 import sqlite3
 
 
@@ -88,14 +89,14 @@ class Name:
 
         To create a name with just a first name, pass None as the last name:
 
-        >>> my_name = Name('Ted', None)     # Ted is first name
+            >>> my_name = Name('Ted', None)     # Ted is first name
         >>> my_name = Name('Ted')           # Ted is last name
 
         The full name string will be 'Ted' in both cases above.
         Similarly, to create a name with just a middle name, pass
         None as both the first and the last name:
 
-        >>> my_name = Name(None, 'Ted', None)
+            >>> my_name = Name(None, 'Ted', None)
 
         Any number of None names may be passed, as they are ignored when
         building name strings (except for place holding first/last names).
@@ -163,16 +164,22 @@ class MemberDatabase:
     """Interface to a SQLite3 database of members."""
 
     class BadSearchAuthorityError(Error):
-        """Raised when a bad search authority string (i.e. neither 'barcode' nor 'name') is passed.
+        """Raised when a bad search authority string is passed.
+
+        The only permissible strings are 'barcode' and 'name'.
 
         Attributes:
             authority: the bad authority string
         """
 
-        def __init__(self, authority, *args):
-            """Create a BadSearchAuthorityError for authority string `authority`."""
+        def __init__(self, authority_string, *args):
+            """Create a BadSearchAuthorityError for a given authority string.
+
+            Arguments:
+                authority_string: the bad authority string
+            """
             Error.__init__(self, *args)
-            self.authority = authority
+            self.authority_string = authority_string
 
     def __init__(self, db_file='members.db', safe=True):
         """Create a MemberDatabase.
@@ -213,7 +220,7 @@ class MemberDatabase:
             columns += ['lastName=?']
             values += (member.name.last(), )
         if not columns:
-            # TODO remove or replace with exception if necessary
+            # TODO remove None return or replace with exception if necessary
             return None, None
         return sep.join(columns), values
 
@@ -222,7 +229,7 @@ class MemberDatabase:
             return self.__sql_search_barcode_phrase(member)
         elif authority == 'name':
             return self.__sql_search_name_phrase(member)
-        raise BadSearchAuthorityError
+        raise MemberDatabase.BadSearchAuthorityError
 
     def __sql_search_barcode_phrase(self, member):
         return 'barcode=?', (member.barcode, )
@@ -234,29 +241,31 @@ class MemberDatabase:
         # authority='barcode' yields name update query and vice versa
         # if the barcode is authoritative, it is the name we should update
         if authority == 'barcode':
-            return self.__sql_update_name_phrase(member)
+            return self.__sql_build_name_value_pairs(member, sep=',')
         elif authority == 'name':
-            return self.__sql_update_barcode_phrase(member)
-        raise BadSearchAuthorityError
+            return ('barcode=?', (member.barcode,))
+        raise MemberDatabase.BadSearchAuthorityError
 
-    def __sql_update_barcode_phrase(self, member):
-        return ('barcode=?', (member.barcode,))
+    def __join_sql_cmds(self, *cmds):
+        phrase_list, values_list = zip(*cmds)
+        return (''.join(phrase_list),
+                tuple(value for values in values_list for value in values))
 
-    def __sql_update_name_phrase(self, member):
-        return self.__sql_build_name_value_pairs(member, ',')
-
-    def __update_timestamp(self, member, authority = 'barcode'):
+    def __update_timestamp(self, member, authority='barcode'):
         """Update member last_attended date."""
-        search_phrase, search_values = self.__sql_search_phrase(member, authority)
-        ts_query, ts_values = ('UPDATE users SET last_attended=? WHERE ' + search_phrase, (date.today(),) + search_values)
-        self.__connection.cursor().execute(ts_query, ts_values)
+        self.__connection.cursor().execute(*self.__join_sql_cmds(
+            ('UPDATE users SET last_attended=? WHERE ', (date.today(),)),
+            self.__sql_search_phrase(member, authority)
+            ))
 
-    def __autofix(self, member, authority = 'barcode'):
-        cursor = self.__connection.cursor()
+    def __autofix(self, member, authority='barcode'):
         if member.barcode and member.name:
-            search_phrase, search_values = self.__sql_search_phrase(member, authority)
-            update_phrase, update_values = self.__sql_update_phrase(member, authority)
-            cursor.execute('UPDATE users SET ' + update_phrase + ' WHERE ' + search_phrase, update_values + search_values)
+            self.__connection.cursor().execute(*self.__join_sql_cmds(
+                ('UPDATE users SET ', ()),
+                self.__sql_update_phrase(member, authority),
+                (' WHERE ', ()),
+                self.__sql_search_phrase(member, authority)
+                ))
 
     def get_member(self, member, update_timestamp=True, autofix=False):
         """Retrieve a member's names from the database.
@@ -303,16 +312,20 @@ class MemberDatabase:
         search_authority = None
         # first try to find member by barcode, if possible
         if member.barcode:
-            search_phrase, search_values = self.__sql_search_barcode_phrase(member)
-            cursor.execute('SELECT firstName,lastName FROM users WHERE ' + search_phrase, search_values)
+            cursor.execute(*self.__join_sql_cmds(
+                ('SELECT firstName,lastName FROM users WHERE ', ()),
+                self.__sql_search_barcode_phrase(member)
+                ))
             users = cursor.fetchall()
             if users:
                 search_authority = 'barcode'
 
         # barcode lookup failed; now try finding by name
         if not search_authority and member.name:
-            search_phrase, search_values = self.__sql_search_name_phrase(member)
-            cursor.execute('SELECT firstName,lastName FROM users WHERE ' + search_phrase, search_values)
+            cursor.execute(*self.__join_sql_cmds(
+                ('SELECT firstName,lastName FROM users WHERE ', ()),
+                self.__sql_search_name_phrase(member)
+                ))
             users = cursor.fetchall()
             if users:
                 search_authority = 'name'
@@ -326,7 +339,8 @@ class MemberDatabase:
         if autofix:
             self.__autofix(member, authority=search_authority)
 
-        self.optional_commit()
+        if autofix or update_timestamp:
+            self.optional_commit()
 
         # TODO dedupe if necessary
         return users[0]
