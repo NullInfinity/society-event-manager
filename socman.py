@@ -31,7 +31,6 @@ SOFTWARE.
 
 import collections
 from datetime import date, datetime
-import operator
 import sqlite3
 
 
@@ -40,6 +39,7 @@ class Error(Exception):
     """The base class for exceptions in socman."""
 
     def __init__(self, *args):
+        """Create an Error object."""
         Exception.__init__(self, *args)
 
 
@@ -164,6 +164,7 @@ class MemberDatabase:
     """Interface to a SQLite3 database of members."""
 
     class BadSearchAuthorityError(Error):
+
         """Raised when a bad search authority string is passed.
 
         The only permissible strings are 'barcode' and 'name'.
@@ -200,7 +201,7 @@ class MemberDatabase:
         self.__connection.close()
 
     def optional_commit(self):
-        """Commits changes to database if `safe` is set to `True`.
+        """Commit changes to database if `safe` is set to `True`.
 
         This means increased performance can be chosen over the highest level
         of write safety. For example, by default a timestamp is updated in the

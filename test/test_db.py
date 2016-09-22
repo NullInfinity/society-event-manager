@@ -92,7 +92,8 @@ def test_get_member_bad_member_(mdb):
 def test_get_member_not_present(mdb, member):
     """Test that get_member raises an error if a member is not present.
 
-    In particular, it should raise socman.MemberNotFoundError."""
+    In particular, it should raise socman.MemberNotFoundError.
+    """
     with pytest.raises(socman.MemberNotFoundError):
         mdb.get_member(member)
 
