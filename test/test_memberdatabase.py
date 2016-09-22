@@ -209,9 +209,6 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             mdb.mocksql_connect().commit.call_count)
 
 
-# suffix on each comment description will contain either AF, TS, both or none
-#   AF = autofix enabled
-#   TS = update_timestamp enabled
 @pytest.mark.parametrize("args,mock_returns,calls", [
     (   # member with barcode only
         # present (and unique) in DB under barcode
@@ -235,7 +232,7 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             count={
                 'execute': 1,
                 'fetchall': 1,
-                'commit': 1
+                'commit': 0
                 },
             )
         ),
@@ -354,7 +351,7 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             count={
                 'execute': 1,
                 'fetchall': 1,
-                'commit': 1
+                'commit': 0
                 },
             )
         ),
@@ -486,7 +483,7 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             count={
                 'execute': 1,
                 'fetchall': 1,
-                'commit': 1
+                'commit': 0
                 },
             )
         ),
@@ -614,7 +611,7 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             count={
                 'execute': 2,
                 'fetchall': 2,
-                'commit': 1
+                'commit': 0
                 },
             )
         ),
