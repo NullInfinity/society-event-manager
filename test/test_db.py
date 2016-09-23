@@ -161,3 +161,25 @@ def test_member_count(mdb, member_count):
         mdb.add_member(socman.Member(str(i)))
     # expect member_count+1 entries because mdb fixture already added one
     assert member_count + 1 == mdb.member_count()
+
+
+def test_update_member_name(mdb):
+    """Check update_member correctly updates name."""
+    barcode = '12341234'
+    name = socman.Name('Ted', 'Bobson')
+    newname = socman.Name('Bill', 'Rogers')
+
+    member = socman.Member(barcode, name=name)
+    newmember = socman.Member(barcode, name=newname)
+
+    assert ('Ted', 'Bobson') == mdb.get_member(socman.Member(barcode))
+    assert ('Ted', 'Bobson') == mdb.get_member(socman.Member(barcode=None, name=name))
+    with pytest.raises(socman.MemberNotFoundError):
+        mdb.get_member(socman.Member(barcode=None, name=newname))
+
+    mdb.update_member(socman.Member(barcode, name=newname), authority='barcode')
+
+    assert ('Bill', 'Rogers') == mdb.get_member(socman.Member(barcode))
+    assert ('Bill', 'Rogers') == mdb.get_member(socman.Member(barcode=None, name=newname))
+    with pytest.raises(socman.MemberNotFoundError):
+        mdb.get_member(socman.Member(barcode=None, name=name))
