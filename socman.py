@@ -57,6 +57,22 @@ class BadMemberError(Error):
         self.member = member
 
 
+class IncompleteMemberError(Error):
+
+    """Raised when an incomplete member is passed.
+
+    A member is incomplete unless it has both barcode and name.
+
+    Attributes:
+        member: the incomplete member object
+    """
+
+    def __init__(self, member, *args):
+        """Create a IncompleteMemberError for member object `member`."""
+        Error.__init__(self, *args)
+        self.member = member
+
+
 class MemberNotFoundError(Error):
 
     """Raised when a member is not found in the database.
@@ -402,6 +418,42 @@ class MemberDatabase:
 
         # direct commit here: don't want to lose new member data
         self.__connection.commit()
+
+    def update_member(self, member, authority='barcode', update_timestamp=True):
+        """Update the record for a member already in the database.
+
+        Internally, once the necessary checks have been performed on `member`
+        and `authority`, `update_member` simply calls `add_member` with
+        `autofix` enabled and `update_timestamp` set appropriately.
+
+        Arguments:
+            member:     a member object to update, must have name and barcode
+            authority:  string set to either 'name' or 'barcode': specifies
+                        which should be assumed to be correct (the other will
+                        be updated)
+            update_timestamp: whether the last_attended date should be updated
+                              (passed to `add_member`)
+
+        Returns:
+            Nothing.
+
+        Raises:
+            BadMemberError: `member` has neither name nor barcode or is `None`
+            IncompleteMemberError: `member` does not have both name and barcode
+            MemberNotFoundError: `member` is not in the database
+        """
+        if not member or not (member.barcode or member.name):
+            raise BadMemberError(member)
+
+        if not (member.barcode and member.name):
+            raise IncompleteMemberError(member)
+
+        # if member is not in database, get_member raises a MemberNotFoundError
+        # this also updates the member timestamp for us if desired
+        self.get_member(member, update_timestamp=update_timestamp)
+
+        self.__autofix(member, authority=authority)
+
 
     def member_count(self):
         """Return the number of members in the database.

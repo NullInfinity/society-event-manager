@@ -718,7 +718,7 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
             )
         ),
     ])
-def test_get_member(mdb, args, mock_returns, calls):
+def test_get_member_present(mdb, args, mock_returns, calls):
     """Test get_member with a member object present in the database.
 
     Tests with various values of `autofix` and `update_timestamp`.
@@ -921,3 +921,66 @@ def test_member_count(mdb):
     """
     mdb.mocksql_connect().cursor().fetchone.return_value = (5,)
     assert 5 == mdb.member_count()
+
+
+@pytest.mark.parametrize('member', [
+    None,
+    socman.Member(None),
+    ])
+@pytest.mark.parametrize('authority', ['barcode', 'name'])
+def test_update_member_bad_member(mdb, member, authority):
+    """Check update_member raises a BadMemberError when passed a bad member."""
+    with pytest.raises(socman.BadMemberError):
+        mdb.update_member(member, authority=authority)
+
+
+@pytest.mark.parametrize('member', [
+    socman.Member('1000000'),
+    socman.Member(None, name=socman.Name('Ted', 'Bobson')),
+    ])
+@pytest.mark.parametrize('authority', ['barcode', 'name'])
+def test_update_member_incomplete_member(mdb, member, authority):
+    """Check update_member raises an IncompleteMemberError when passed an incomplete member."""
+    with pytest.raises(socman.IncompleteMemberError):
+        mdb.update_member(member, authority=authority)
+
+
+@pytest.mark.parametrize('member', [
+    # member with name and barcode
+    # not present in DB under barcode or name
+    socman.Member(barcode='00000000',
+                  name=socman.Name('Ted', 'Bobson'),
+                  college='Wolfson'),
+    ])
+@pytest.mark.parametrize('authority', ['barcode', 'name'])
+def test_update_member_not_present(mdb, member, authority):
+    """Check update_member raises a MemberNotFoundError when member is not in the database."""
+    mdb.mocksql_connect().cursor().fetchall.side_effect = [[], []]
+    with pytest.raises(socman.MemberNotFoundError):
+        mdb.update_member(member, authority=authority)
+
+
+@pytest.mark.parametrize("member,mock_returns", [
+    (   # member with name and barcode
+        # present (and unique) in DB under barcode
+        socman.Member(barcode='10000000',
+                      name=socman.Name('Ted', 'Bobson'),
+                      college='Wolfson'),
+        [
+            [('Ted', 'Bobson')],
+            ],
+        ),
+    ])
+@pytest.mark.parametrize('authority', ['barcode', 'name'])
+def test_update_member_present(mdb, member, authority, mock_returns):
+    """Test that update_member correctly updates a member that is present."""
+    mdb.mocksql_connect().cursor().fetchall.side_effect = mock_returns
+    mdb.update_member(member, authority=authority)
+    if authority == 'barcode':
+        mdb.mocksql_connect().cursor().execute.assert_called_with(
+            'UPDATE users SET firstName=?,lastName=? WHERE barcode=?',
+            (member.name.given(), member.name.last(), member.barcode))
+    elif authority == 'name':
+        mdb.mocksql_connect().cursor().execute.assert_called_with(
+            'UPDATE users SET barcode=? WHERE firstName=? AND lastName=?',
+            (member.barcode, member.name.given(), member.name.last()))
