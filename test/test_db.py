@@ -169,17 +169,17 @@ def test_update_member_name(mdb):
     name = socman.Name('Ted', 'Bobson')
     newname = socman.Name('Bill', 'Rogers')
 
-    member = socman.Member(barcode, name=name)
-    newmember = socman.Member(barcode, name=newname)
-
     assert ('Ted', 'Bobson') == mdb.get_member(socman.Member(barcode))
-    assert ('Ted', 'Bobson') == mdb.get_member(socman.Member(barcode=None, name=name))
+    assert (('Ted', 'Bobson') ==
+            mdb.get_member(socman.Member(barcode=None, name=name)))
     with pytest.raises(socman.MemberNotFoundError):
         mdb.get_member(socman.Member(barcode=None, name=newname))
 
-    mdb.update_member(socman.Member(barcode, name=newname), authority='barcode')
+    mdb.update_member(socman.Member(barcode, name=newname),
+                      authority='barcode')
 
     assert ('Bill', 'Rogers') == mdb.get_member(socman.Member(barcode))
-    assert ('Bill', 'Rogers') == mdb.get_member(socman.Member(barcode=None, name=newname))
+    assert (('Bill', 'Rogers') ==
+            mdb.get_member(socman.Member(barcode=None, name=newname)))
     with pytest.raises(socman.MemberNotFoundError):
         mdb.get_member(socman.Member(barcode=None, name=name))

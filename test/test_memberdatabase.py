@@ -920,7 +920,7 @@ def test_member_count(mdb):
     It should request the number of rows in the `users` table.
     """
     mdb.mocksql_connect().cursor().fetchone.return_value = (5,)
-    assert 5 == mdb.member_count()
+    assert mdb.member_count() == 5
 
 
 @pytest.mark.parametrize('member', [
@@ -929,7 +929,10 @@ def test_member_count(mdb):
     ])
 @pytest.mark.parametrize('authority', ['barcode', 'name'])
 def test_update_member_bad_member(mdb, member, authority):
-    """Check update_member raises a BadMemberError when passed a bad member."""
+    """Check update_member against a bad member.
+
+    It should raise a BadMemberError in this case.
+    """
     with pytest.raises(socman.BadMemberError):
         mdb.update_member(member, authority=authority)
 
@@ -940,7 +943,10 @@ def test_update_member_bad_member(mdb, member, authority):
     ])
 @pytest.mark.parametrize('authority', ['barcode', 'name'])
 def test_update_member_incomplete_member(mdb, member, authority):
-    """Check update_member raises an IncompleteMemberError when passed an incomplete member."""
+    """Check update_member against an incomplete member.
+
+    It should raise an IncompleteMemberError in this case.
+    """
     with pytest.raises(socman.IncompleteMemberError):
         mdb.update_member(member, authority=authority)
 
@@ -954,7 +960,10 @@ def test_update_member_incomplete_member(mdb, member, authority):
     ])
 @pytest.mark.parametrize('authority', ['barcode', 'name'])
 def test_update_member_not_present(mdb, member, authority):
-    """Check update_member raises a MemberNotFoundError when member is not in the database."""
+    """Check update_member against a member not in the database.
+
+    It should raise a MemberNotFoundError in this case.
+    """
     mdb.mocksql_connect().cursor().fetchall.side_effect = [[], []]
     with pytest.raises(socman.MemberNotFoundError):
         mdb.update_member(member, authority=authority)
