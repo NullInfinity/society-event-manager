@@ -399,9 +399,9 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
                     ('00000000',)
                     ),
                 unittest.mock.call(
-                    """UPDATE users SET firstName=?,lastName=? """
+                    """UPDATE users SET firstName=?,lastName=?,updated_at=? """
                     """WHERE barcode=?""",
-                    ('Ted', 'Bobson', '00000000')
+                    ('Ted', 'Bobson', datetime.datetime.min, '00000000')
                     ),
                 ],
             count={
@@ -436,9 +436,9 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
                     (datetime.date.min, '00000000')
                     ),
                 unittest.mock.call(
-                    """UPDATE users SET firstName=?,lastName=? """
+                    """UPDATE users SET firstName=?,lastName=?,updated_at=? """
                     """WHERE barcode=?""",
-                    ('Ted', 'Bobson', '00000000')
+                    ('Ted', 'Bobson', datetime.datetime.min, '00000000')
                     ),
                 ],
             count={
@@ -663,9 +663,9 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
                     ('Ted', 'Bobson')
                     ),
                 unittest.mock.call(
-                    """UPDATE users SET barcode=? """
+                    """UPDATE users SET barcode=?,updated_at=? """
                     """WHERE firstName=? AND lastName=?""",
-                    ('00000000', 'Ted', 'Bobson')
+                    ('00000000', datetime.datetime.min, 'Ted', 'Bobson')
                     ),
                 ],
             count={
@@ -706,9 +706,9 @@ def test_get_member_not_present(mdb, member, autofix, update_timestamp, calls):
                     (datetime.date.min, 'Ted', 'Bobson')
                     ),
                 unittest.mock.call(
-                    """UPDATE users SET barcode=? """
+                    """UPDATE users SET barcode=?,updated_at=? """
                     """WHERE firstName=? AND lastName=?""",
-                    ('00000000', 'Ted', 'Bobson')
+                    ('00000000', datetime.datetime.min, 'Ted', 'Bobson')
                     ),
                 ],
             count={
@@ -987,9 +987,13 @@ def test_update_member_present(mdb, member, authority, mock_returns):
     mdb.update_member(member, authority=authority)
     if authority == 'barcode':
         mdb.mocksql_connect().cursor().execute.assert_called_with(
-            'UPDATE users SET firstName=?,lastName=? WHERE barcode=?',
-            (member.name.given(), member.name.last(), member.barcode))
+            """UPDATE users SET firstName=?,lastName=?,updated_at=? """
+            """WHERE barcode=?""",
+            (member.name.given(), member.name.last(),
+             datetime.datetime.min, member.barcode))
     elif authority == 'name':
         mdb.mocksql_connect().cursor().execute.assert_called_with(
-            'UPDATE users SET barcode=? WHERE firstName=? AND lastName=?',
-            (member.barcode, member.name.given(), member.name.last()))
+            """UPDATE users SET barcode=?,updated_at=? """
+            """WHERE firstName=? AND lastName=?""",
+            (member.barcode, datetime.datetime.min,
+             member.name.given(), member.name.last()))

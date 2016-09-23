@@ -258,10 +258,13 @@ class MemberDatabase:
         # authority='barcode' yields name update query and vice versa
         # if the barcode is authoritative, it is the name we should update
         if authority == 'barcode':
-            return self.__sql_build_name_value_pairs(member, sep=',')
+            update_phrase = self.__sql_build_name_value_pairs(member, sep=',')
         elif authority == 'name':
-            return ('barcode=?', (member.barcode,))
-        raise MemberDatabase.BadSearchAuthorityError
+            update_phrase = ('barcode=?', (member.barcode,))
+        else:
+            raise MemberDatabase.BadSearchAuthorityError
+        return self.__join_sql_cmds(update_phrase,
+                                    (',updated_at=?', (datetime.utcnow(), )))
 
     def __join_sql_cmds(self, *cmds):
         phrase_list, values_list = zip(*cmds)
