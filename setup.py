@@ -1,11 +1,14 @@
-"""The setup module for socman."""
+"""Setup script for socman."""
 
 import codecs
 import os
 import setuptools
 
-FILEPATH = os.path.abspath(os.path.dirname(__file__))
-with codecs.open(os.path.join(FILEPATH, 'README.md'), encoding='utf-8') as f:
+DIRECTORY_PATH = os.path.abspath(os.path.dirname(__file__))
+README_PATH = os.path.join(DIRECTORY_PATH, 'README.rst')
+
+# read long description from readme
+with codecs.open(README_PATH, encoding='utf-8') as f:
     LONG_DESCRIPTION = f.read()
 
 setuptools.setup(
