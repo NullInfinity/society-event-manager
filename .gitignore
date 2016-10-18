@@ -2,7 +2,7 @@
 *.pyc
 __pycache__
 *.db-journal
-env*/
+venv*/
 .coverage
 wiki/
 .cache
