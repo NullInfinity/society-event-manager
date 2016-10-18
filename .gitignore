@@ -1,9 +1,17 @@
+# SQL databases and other files
 *.db
-*.pyc
-__pycache__
 *.db-journal
+
+# python, pytest, tox files etc
+*.pyc
+__pycache__/
 venv*/
 .coverage
-wiki/
 .cache
+.tox
+build/
+dist/
+
 *.egg-info
+# the wiki is a separate repo
+wiki/
