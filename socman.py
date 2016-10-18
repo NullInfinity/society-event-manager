@@ -422,7 +422,8 @@ class MemberDatabase:
         # direct commit here: don't want to lose new member data
         self.__connection.commit()
 
-    def update_member(self, member, authority='barcode', update_timestamp=True):
+    def update_member(self, member, authority='barcode',
+                      update_timestamp=True):
         """Update the record for a member already in the database.
 
         Internally, once the necessary checks have been performed on `member`
@@ -456,7 +457,6 @@ class MemberDatabase:
         self.get_member(member, update_timestamp=update_timestamp)
 
         self.__autofix(member, authority=authority)
-
 
     def member_count(self):
         """Return the number of members in the database.
