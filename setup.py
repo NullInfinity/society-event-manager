@@ -13,7 +13,7 @@ with codecs.open(README_PATH, encoding='utf-8') as f:
 
 setuptools.setup(
     name='socman',
-    version='0.1.0-dev',
+    version='0.1.0.dev0',
     description='A Python library for society and membership management',
     long_description=LONG_DESCRIPTION,
     url='https://github.com/NullInfinity/socman/',
