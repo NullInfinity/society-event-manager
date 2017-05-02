@@ -32,6 +32,9 @@ while True:
         break
     if barcode == 'QUIT':
         break;
+    if barcode == 'ONE':
+        oneoffs += 1
+        continue
 
     if barcode:
         barcode = barcode[:7]  # only care about first 7 digits
