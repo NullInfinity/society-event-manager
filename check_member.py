@@ -34,6 +34,7 @@ while True:
         break;
     if barcode == 'ONE':
         oneoffs += 1
+        attended += 1
         continue
 
     if barcode:
