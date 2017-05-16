@@ -30,6 +30,7 @@ SOFTWARE.
 """
 
 import collections
+import csv
 from datetime import date, datetime
 import sqlite3
 
@@ -466,3 +467,24 @@ class MemberDatabase:
         cursor = self.__connection.cursor()
         cursor.execute('SELECT COUNT(*) FROM users')
         return int(cursor.fetchone()[0])
+
+
+    def write_csv(self, csv_filename):
+        """Write the entire database to a CSV file."""
+        csv_writer = csv.writer(open(csv_filename, 'w'))
+        cursor = self.__connection.cursor()
+        cursor.execute('SELECT * FROM users')
+
+        csv_writer.writerow([
+            'id',
+            'firstName',
+            'lastName',
+            'barcode',
+            'datejoined',
+            'created_at',
+            'updated_at',
+            'college',
+            'last_attended',
+            'unpaid'
+            ])
+        csv_writer.writerows(cursor.fetchall())
